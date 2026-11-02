@@ -8,6 +8,7 @@ import {
 import { parseExerciseDraft } from "../domain/exercises";
 import type {
   AppSnapshot,
+  AppLanguage,
   CompanyProfile,
   ExerciseDraft,
   JournalEntry,
@@ -18,7 +19,8 @@ import type {
 } from "../domain/types";
 import { createRepository, freshProgress } from "../data/repository";
 
-const emptySnapshot = (): AppSnapshot => ({
+const emptySnapshot = (language?: AppLanguage): AppSnapshot => ({
+  language,
   profile: null,
   progress: freshProgress(),
   entries: [],
@@ -57,13 +59,18 @@ export function useAppModel() {
       };
       const progress = freshProgress();
       await Promise.all([repository.saveProfile(profile), repository.saveProgress(progress)]);
-      const tutorial = createScenarioInstance(profile, progress, "tutorial", localDateKey());
+      const tutorial = createScenarioInstance(profile, progress, "tutorial", localDateKey(), "", snapshot.language ?? "nl");
       await repository.saveInstance(tutorial);
       await reload();
       return tutorial;
     },
-    [reload, repository],
+    [reload, repository, snapshot.language],
   );
+
+  const setLanguage = useCallback(async (language: AppLanguage) => {
+    await repository.saveLanguage(language);
+    setSnapshot((current) => ({ ...current, language }));
+  }, [repository]);
 
   const getOrCreateScenario = useCallback(
     async (mode: ScenarioMode) => {
@@ -80,7 +87,7 @@ export function useAppModel() {
         if (existing) return existing;
       }
       const nonce = mode === "practice" ? `${Date.now()}:${snapshot.instances.length}` : "";
-      const instance = createScenarioInstance(snapshot.profile, snapshot.progress, mode, date, nonce);
+      const instance = createScenarioInstance(snapshot.profile, snapshot.progress, mode, date, nonce, snapshot.language ?? "nl");
       await repository.saveInstance(instance);
       setSnapshot((current) => ({ ...current, instances: [...current.instances, instance] }));
       return instance;
@@ -115,6 +122,7 @@ export function useAppModel() {
         templateId,
         localDateKey(),
         `${Date.now()}:${snapshot.instances.length}`,
+        snapshot.language ?? "nl",
       );
       await repository.saveInstance(instance);
       setSnapshot((current) => ({ ...current, instances: [...current.instances, instance] }));
@@ -179,7 +187,7 @@ export function useAppModel() {
 
   const reset = useCallback(async () => {
     await repository.reset();
-    setSnapshot(emptySnapshot());
+    setSnapshot((current) => emptySnapshot(current.language));
   }, [repository]);
 
   const createExercise = useCallback(
@@ -218,6 +226,7 @@ export function useAppModel() {
     loading,
     snapshot,
     exercises,
+    setLanguage,
     createCompany,
     getOrCreateScenario,
     startStandardPractice,

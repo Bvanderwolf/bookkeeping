@@ -12,6 +12,7 @@ Een mobile-first PWA waarin beginnende ondernemers spelenderwijs dubbele boekhou
 - Balans, winst-en-verliesrekening en journaaloverzicht.
 - Lokale IndexedDB-opslag met export, import en volledige reset.
 - Installeerbare en na het eerste bezoek offline bruikbare PWA.
+- Nederlandse en Engelse interface en standaardoefeningen, met een taalkeuze bij de eerste start en in het profiel.
 
 > De app is een educatieve simulatie en geen boekhoudkundig of fiscaal advies.
 
@@ -55,5 +56,9 @@ BASE_PATH=/bookkeeping/ npm run build
 ## Inhoud bijwerken
 
 Scenario's staan in `app/domain/scenarios.ts`. Elke template bevat niveau, concept, variabele bedragen, sectorscope, correcte journaalregels, hints en uitleg. De buildvalidatie controleert onder meer unieke id's en gelijke debet- en credittotalen.
+
+Interfacevertalingen staan in `app/i18n.tsx`; Engelse rekening-, sector- en standaardscenario-inhoud staat bij de bijbehorende domeindata. Zelfgemaakte en geïmporteerde oefeningen worden niet automatisch vertaald.
+
+De herbruikbare acceptatiecriteria en onderhoudsregels voor meertaligheid en GitHub Pages staan in [`specs/0003-meertaligheid-en-github-pages.md`](specs/0003-meertaligheid-en-github-pages.md). Werk die spec bij wanneer taalondersteuning, standaardoefeningen, routes, assets of PWA-gedrag verandert.
 
 Laat Nederlandse fiscale scenario's vóór publiek gebruik controleren door een boekhouder en actualiseer btw-regels wanneer de Belastingdienst die wijzigt.

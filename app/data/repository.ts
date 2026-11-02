@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type {
   AppSnapshot,
+  AppLanguage,
   Attempt,
   CompanyProfile,
   ExerciseDefinition,
@@ -14,8 +15,8 @@ import type {
 import { exerciseDefinitionSchema, parseExerciseExport, toExerciseExport } from "../domain/exercises";
 
 interface SettingRecord {
-  key: "profile" | "progress";
-  value: CompanyProfile | Progress;
+  key: "profile" | "progress" | "language";
+  value: CompanyProfile | Progress | AppLanguage;
 }
 
 export const freshProgress = (): Progress => ({
@@ -56,6 +57,7 @@ class AppDatabase extends Dexie {
 export interface AppRepository {
   load(): Promise<AppSnapshot>;
   saveProfile(profile: CompanyProfile): Promise<void>;
+  saveLanguage(language: AppLanguage): Promise<void>;
   saveProgress(progress: Progress): Promise<void>;
   saveInstance(instance: ScenarioInstance): Promise<void>;
   saveAttempt(attempt: Attempt): Promise<void>;
@@ -73,14 +75,16 @@ export function createRepository(databaseName = "mijn-bedrijf-app"): AppReposito
   const db = new AppDatabase(databaseName);
 
   const load = async (): Promise<AppSnapshot> => {
-    const [profileRecord, progressRecord, entries, instances, attempts] = await Promise.all([
+    const [profileRecord, progressRecord, languageRecord, entries, instances, attempts] = await Promise.all([
       db.settings.get("profile"),
       db.settings.get("progress"),
+      db.settings.get("language"),
       db.entries.toArray(),
       db.instances.toArray(),
       db.attempts.toArray(),
     ]);
     return {
+      language: languageRecord?.value === "en" || languageRecord?.value === "nl" ? languageRecord.value : undefined,
       profile: (profileRecord?.value as CompanyProfile | undefined) ?? null,
       progress: (progressRecord?.value as Progress | undefined) ?? freshProgress(),
       entries,
@@ -92,6 +96,7 @@ export function createRepository(databaseName = "mijn-bedrijf-app"): AppReposito
   return {
     load,
     saveProfile: (profile) => db.settings.put({ key: "profile", value: profile }).then(() => undefined),
+    saveLanguage: (language) => db.settings.put({ key: "language", value: language }).then(() => undefined),
     saveProgress: (progress) => db.settings.put({ key: "progress", value: progress }).then(() => undefined),
     saveInstance: (instance) => db.instances.put(instance).then(() => undefined),
     saveAttempt: (attempt) => db.attempts.put(attempt).then(() => undefined),
@@ -142,8 +147,13 @@ export function createRepository(databaseName = "mijn-bedrijf-app"): AppReposito
     exportData: load,
     async importData(snapshot) {
       await db.transaction("rw", [db.settings, db.entries, db.instances, db.attempts], async () => {
+        const currentLanguage = await db.settings.get("language");
         await Promise.all([db.settings.clear(), db.entries.clear(), db.instances.clear(), db.attempts.clear()]);
         if (snapshot.profile) await db.settings.add({ key: "profile", value: snapshot.profile });
+        const language = snapshot.language === "en" || snapshot.language === "nl"
+          ? snapshot.language
+          : currentLanguage?.value;
+        if (language === "en" || language === "nl") await db.settings.add({ key: "language", value: language });
         await db.settings.add({ key: "progress", value: snapshot.progress });
         if (snapshot.entries.length) await db.entries.bulkAdd(snapshot.entries);
         if (snapshot.instances.length) await db.instances.bulkAdd(snapshot.instances);
@@ -152,7 +162,9 @@ export function createRepository(databaseName = "mijn-bedrijf-app"): AppReposito
     },
     async reset() {
       await db.transaction("rw", [db.settings, db.entries, db.instances, db.attempts], async () => {
+        const language = await db.settings.get("language");
         await Promise.all([db.settings.clear(), db.entries.clear(), db.instances.clear(), db.attempts.clear()]);
+        if (language) await db.settings.add(language);
       });
     },
   };

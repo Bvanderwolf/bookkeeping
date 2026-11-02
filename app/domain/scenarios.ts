@@ -3,6 +3,7 @@ import { formatMoney } from "./accounts";
 import { isBalanced } from "./accounting";
 import type {
   CompanyProfile,
+  AppLanguage,
   Progress,
   ScenarioInstance,
   ScenarioMode,
@@ -18,6 +19,14 @@ const vat = (netCents: number, rate: number) => Math.round(netCents * rate);
 const gross = (netCents: number, rate: number) => netCents + vat(netCents, rate);
 
 const commonHint = "Denk eerst na: wat komt het bedrijf binnen en wat gaat eruit? Bezittingen nemen meestal toe aan de debetzijde.";
+
+interface ScenarioTranslation {
+  title: string;
+  buildStory: (amountCents: number, profile: CompanyProfile) => string;
+  hint: string;
+  explanation: string;
+  sceneEffect: string;
+}
 
 export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   {
@@ -221,6 +230,165 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
 ];
 
+const enMoney = (cents: number) => formatMoney(cents, false, "en");
+const englishCommonHint = "First consider what comes into the business and what leaves it. Assets generally increase on the debit side.";
+
+const ENGLISH_SCENARIOS: Record<string, ScenarioTranslation> = {
+  "start-capital": {
+    title: "Your first starting capital",
+    buildStory: (amount, profile) => `You deposit ${enMoney(amount)} of your personal money into ${profile.name}'s business bank account. Record the increase in bank and equity.`,
+    hint: "The bank account is an asset and increases. Your contribution increases equity by the same amount.",
+    explanation: "The business bank account increases on the debit side. Equity increases by the same amount on the credit side.",
+    sceneEffect: "The key has turned: your business has officially opened!",
+  },
+  "buy-equipment": {
+    title: "A good workspace",
+    buildStory: (amount) => `You buy equipment for ${enMoney(amount)} and pay immediately from the bank. Ignore VAT in this exercise.`,
+    hint: englishCommonHint,
+    explanation: "Equipment is an asset and increases on the debit side. The bank balance decreases on the credit side.",
+    sceneEffect: "New equipment appears in your business.",
+  },
+  "office-costs": {
+    title: "Small supplies",
+    buildStory: (amount) => `You pay ${enMoney(amount)} in general business expenses from the bank. Ignore VAT in this scenario.`,
+    hint: "Expenses reduce your profit, but are recorded on the debit side.",
+    explanation: "Expenses increase on the debit side; your bank decreases by the same amount on the credit side.",
+    sceneEffect: "The workspace looks much better organised.",
+  },
+  "cash-sale": {
+    title: "Your first sale",
+    buildStory: (amount, profile) => `A customer buys your ${profile.offeringId === "webdesign" ? "service" : "offering"} for ${enMoney(amount)} and pays directly into the bank. Ignore VAT for now.`,
+    hint: "Money enters the bank account. The corresponding account is revenue.",
+    explanation: "The bank increases on the debit side. Revenue increases on the credit side and raises your profit.",
+    sceneEffect: "A happy customer makes the till ring.",
+  },
+  "pay-rent": {
+    title: "The rent is paid",
+    buildStory: (amount) => `The monthly rent of ${enMoney(amount)} is deducted from the bank account.`,
+    hint: "Rent is not an asset you retain, but an expense for this period.",
+    explanation: "Rent expense increases on the debit side and the bank decreases on the credit side.",
+    sceneEffect: "The lights can stay on for another month.",
+  },
+  "customer-invoice": {
+    title: "Invoice to a customer",
+    buildStory: (amount) => `You send an invoice for ${enMoney(amount)}. The customer will pay later; ignore VAT here.`,
+    hint: "You do not have the money yet, but you do have a receivable from the customer.",
+    explanation: "Accounts receivable increases on the debit side. Record earned revenue on the credit side.",
+    sceneEffect: "The first invoice is ready to send.",
+  },
+  "customer-payment": {
+    title: "Customer pays an invoice",
+    buildStory: (amount) => `A customer pays an outstanding invoice of ${enMoney(amount)} into your bank account.`,
+    hint: "Revenue was already recorded when the invoice was sent; do not record it again now.",
+    explanation: "The bank increases on the debit side and the receivable decreases on the credit side.",
+    sceneEffect: "An outstanding invoice gets a green check mark.",
+  },
+  "supplier-invoice": {
+    title: "A supplier's invoice",
+    buildStory: (amount) => `You receive a supplier invoice for ${enMoney(amount)} in general expenses. You will pay next week; ignore VAT.`,
+    hint: "You have incurred an expense but have not paid any money yet. A liability is created.",
+    explanation: "Expenses increase on the debit side and accounts payable (the amount owed to the supplier) increases on the credit side.",
+    sceneEffect: "Another receipt appears in the supplier folder.",
+  },
+  "pay-supplier": {
+    title: "Supplier paid",
+    buildStory: (amount) => `You pay an outstanding supplier invoice of ${enMoney(amount)} through the bank.`,
+    hint: "The expense was already recorded when the invoice arrived. Now only the liability disappears.",
+    explanation: "Accounts payable decreases on the debit side and the bank decreases on the credit side.",
+    sceneEffect: "Your supplier has been paid on time.",
+  },
+  "marketing-campaign": {
+    title: "Your business in the spotlight",
+    buildStory: (amount) => `You pay ${enMoney(amount)} for a small advertising campaign. Ignore VAT.`,
+    hint: "An advert may generate revenue later, but it is an expense now.",
+    explanation: "Marketing expense increases on the debit side and the bank decreases on the credit side.",
+    sceneEffect: "More people know how to find your business.",
+  },
+  "creative-camera-vat": {
+    title: "New creative equipment",
+    buildStory: (net) => `You buy equipment for ${enMoney(net)} excluding 21% VAT. You pay ${enMoney(gross(net, .21))} through the bank.`,
+    hint: "Split the equipment's net value and recoverable VAT across two debit lines.",
+    explanation: "Equipment and VAT receivable are debited; the full amount paid is credited to the bank.",
+    sceneEffect: "Professional equipment gives your studio an upgrade.",
+  },
+  "creative-invoice-vat": {
+    title: "Project delivered",
+    buildStory: (net) => `You invoice ${enMoney(net)} excluding 21% VAT. The customer owes ${enMoney(gross(net, .21))} in total.`,
+    hint: "The customer owes the gross amount; your revenue excludes VAT.",
+    explanation: "Accounts receivable is debited for the gross amount. Revenue and VAT payable are credited separately.",
+    sceneEffect: "A major project has been delivered successfully.",
+  },
+  "shop-inventory-vat": {
+    title: "Inventory replenished",
+    buildStory: (net) => `You receive inventory worth ${enMoney(net)} excluding 21% VAT. You will pay the ${enMoney(gross(net, .21))} invoice later.`,
+    hint: "Inventory and recoverable VAT are assets; the unpaid invoice is a liability.",
+    explanation: "Inventory and VAT receivable are debited. Accounts payable is credited for the gross amount.",
+    sceneEffect: "The shelves are full of new products again.",
+  },
+  "shop-sale-vat": {
+    title: "A nice online order",
+    buildStory: (net) => `A customer immediately pays ${enMoney(gross(net, .21))}. This consists of ${enMoney(net)} revenue and ${enMoney(vat(net, .21))} in 21% VAT.`,
+    hint: "Record the full amount received in the bank and split revenue and VAT on the credit side.",
+    explanation: "The bank is debited for the gross amount; revenue excluding VAT and VAT payable are credited.",
+    sceneEffect: "A new parcel is ready for the customer.",
+  },
+  "hospitality-sale-vat": {
+    title: "Busy lunch",
+    buildStory: (net) => `You receive ${enMoney(gross(net, .09))} in the bank for food and non-alcoholic drinks: ${enMoney(net)} revenue and 9% VAT.`,
+    hint: "The gross amount received consists of revenue and VAT that you will remit later.",
+    explanation: "The bank is debited for the gross amount. Revenue and 9% VAT payable are credited separately.",
+    sceneEffect: "The lunch tables were pleasantly full.",
+  },
+  "hospitality-purchase-vat": {
+    title: "Fresh ingredients",
+    buildStory: (net) => `You buy ingredients for ${enMoney(net)} excluding 9% VAT and immediately pay ${enMoney(gross(net, .09))} through the bank.`,
+    hint: "Split the purchase expense and recoverable VAT across two debit lines.",
+    explanation: "Purchases and VAT receivable are debited; the full payment is credited to the bank.",
+    sceneEffect: "The kitchen is ready for a new day.",
+  },
+};
+
+const ENGLISH_CONCEPTS: Record<string, string> = {
+  "eigen-vermogen": "equity",
+  bezittingen: "assets",
+  kosten: "expenses",
+  omzet: "revenue",
+  debiteuren: "accounts receivable",
+  crediteuren: "accounts payable",
+  "btw-inkoop": "purchase VAT",
+  "btw-verkoop": "sales VAT",
+};
+
+export function scenarioTemplateTitle(template: ScenarioTemplate, language: AppLanguage) {
+  return language === "en" ? ENGLISH_SCENARIOS[template.id]?.title ?? template.title : template.title;
+}
+
+export function scenarioConcept(concept: string, language: AppLanguage) {
+  return language === "en" ? ENGLISH_CONCEPTS[concept] ?? concept : concept.replaceAll("-", " ");
+}
+
+function localizedScenarioFields(template: ScenarioTemplate, amountCents: number, profile: CompanyProfile, language: AppLanguage) {
+  const translation = language === "en" ? ENGLISH_SCENARIOS[template.id] : undefined;
+  return translation ? {
+    title: translation.title,
+    story: translation.buildStory(amountCents, profile),
+    hint: translation.hint,
+    explanation: translation.explanation,
+    sceneEffect: translation.sceneEffect,
+  } : {
+    title: template.title,
+    story: template.buildStory(amountCents, profile),
+    hint: template.hint,
+    explanation: template.explanation,
+    sceneEffect: template.sceneEffect,
+  };
+}
+
+export function localizeScenarioInstance(instance: ScenarioInstance, profile: CompanyProfile, language: AppLanguage) {
+  const template = SCENARIO_TEMPLATES.find((item) => item.id === instance.templateId);
+  return template ? { ...instance, ...localizedScenarioFields(template, instance.amountCents, profile, language) } : instance;
+}
+
 const staticTemplateSchema = z.object({
   id: z.string().min(1),
   level: z.number().int().min(1).max(4),
@@ -260,6 +428,7 @@ export function createScenarioInstance(
   mode: ScenarioMode,
   dateKey: string,
   nonce = "",
+  language: AppLanguage = "nl",
 ): ScenarioInstance {
   const seed = hashSeed(`${profile.id}:${dateKey}:${mode}:${nonce}:content-v1`);
   let pool = SCENARIO_TEMPLATES.filter((template) => {
@@ -275,6 +444,7 @@ export function createScenarioInstance(
   if (unseen.length) pool = unseen;
   const template = pool[seed % pool.length];
   const amountCents = template.amountOptions[(seed >>> 8) % template.amountOptions.length];
+  const localized = localizedScenarioFields(template, amountCents, profile, language);
 
   return {
     id: mode === "daily" ? `daily-${dateKey}` : `${mode}-${dateKey}-${seed}`,
@@ -283,12 +453,8 @@ export function createScenarioInstance(
     assignedDate: dateKey,
     seed,
     amountCents,
-    title: template.title,
-    story: template.buildStory(amountCents, profile),
+    ...localized,
     solution: template.buildSolution(amountCents),
-    hint: template.hint,
-    explanation: template.explanation,
-    sceneEffect: template.sceneEffect,
   };
 }
 
@@ -305,11 +471,13 @@ export function createPracticeInstanceForTemplate(
   templateId: string,
   dateKey: string,
   nonce: string,
+  language: AppLanguage = "nl",
 ): ScenarioInstance {
   const template = standardPracticeTemplates(profile).find((item) => item.id === templateId);
   if (!template) throw new Error("Deze standaardoefening is niet beschikbaar voor jouw bedrijf.");
   const seed = hashSeed(`${profile.id}:${dateKey}:practice:${templateId}:${nonce}:content-v1`);
   const amountCents = template.amountOptions[(seed >>> 8) % template.amountOptions.length];
+  const localized = localizedScenarioFields(template, amountCents, profile, language);
   return {
     id: `practice-${dateKey}-${seed}`,
     templateId: template.id,
@@ -317,11 +485,7 @@ export function createPracticeInstanceForTemplate(
     assignedDate: dateKey,
     seed,
     amountCents,
-    title: template.title,
-    story: template.buildStory(amountCents, profile),
+    ...localized,
     solution: template.buildSolution(amountCents),
-    hint: template.hint,
-    explanation: template.explanation,
-    sceneEffect: template.sceneEffect,
   };
 }

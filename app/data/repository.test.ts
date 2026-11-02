@@ -47,6 +47,15 @@ describe("IndexedDB-repository", () => {
     expect(result.progress).toEqual(freshProgress());
   });
 
+  it("bewaart de taalkeuze ook wanneer het bedrijf wordt gewist", async () => {
+    const repository = createRepository(`language-${crypto.randomUUID()}`);
+    expect((await repository.load()).language).toBeUndefined();
+    await repository.saveLanguage("en");
+    expect((await repository.load()).language).toBe("en");
+    await repository.reset();
+    expect((await repository.load()).language).toBe("en");
+  });
+
   it("bewaart zelfgemaakte en geïmporteerde oefeningen met dezelfde ID afzonderlijk", async () => {
     const repository = createRepository(`exercise-sources-${crypto.randomUUID()}`);
     const exercise = {

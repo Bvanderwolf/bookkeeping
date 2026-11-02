@@ -26,9 +26,14 @@ async function fillShownSolution(page: Page) {
   }
 }
 
+async function chooseDutch(page: Page) {
+  await page.getByRole("button", { name: /Nederlands/ }).click();
+}
+
 test("onboarding, dagelijkse feedback en balans werken op mobiel", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-10-20T10:00:00+02:00"));
   await page.goto("/");
+  await chooseDutch(page);
   await page.getByLabel("Bedrijfsnaam").fill("Studio Spruit");
   await page.getByRole("button", { name: /Kies mijn sector/ }).click();
   await page.getByRole("button", { name: /Webshop/ }).click();
@@ -81,6 +86,7 @@ test("na wissen kan in dezelfde sessie een nieuw fotografiebedrijf worden aangem
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/");
+  await chooseDutch(page);
 
   await page.getByLabel("Bedrijfsnaam").fill("Eerste bedrijf");
   await page.getByRole("button", { name: /Kies mijn sector/ }).click();
@@ -105,6 +111,7 @@ test("na wissen kan in dezelfde sessie een nieuw fotografiebedrijf worden aangem
 
 test("zelfgemaakte en geïmporteerde oefeningen blijven buiten de leerprogressie", async ({ page }) => {
   await page.goto("/");
+  await chooseDutch(page);
   await page.getByLabel("Bedrijfsnaam").fill("Oefenstudio");
   await page.getByRole("button", { name: /Kies mijn sector/ }).click();
   await page.getByRole("button", { name: /Kies mijn aanbod/ }).click();
@@ -170,4 +177,24 @@ test("zelfgemaakte en geïmporteerde oefeningen blijven buiten de leerprogressie
   await expect(page.getByRole("status")).toHaveText("1 toegevoegd en 0 bijgewerkt.");
   await page.getByRole("button", { name: "Oefenen" }).click();
   await expect(page.getByRole("heading", { name: "Geïmporteerde storting" })).toBeVisible();
+});
+
+test("Engels kan bij de eerste start worden gekozen en later in Profiel worden aangepast", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /English/ }).click();
+  await expect(page.getByRole("heading", { name: "What is your business called?" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+
+  await page.getByLabel("Business name").fill("Bright Studio");
+  await page.getByRole("button", { name: /Choose my sector/ }).click();
+  await page.getByRole("button", { name: /Choose my offering/ }).click();
+  await page.getByRole("button", { name: /Open my business/ }).click();
+  await expect(page.getByRole("heading", { name: "Your first starting capital" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
+  await page.getByRole("button", { name: "Nederlands" }).click();
+  await expect(page.getByRole("heading", { name: "Profiel" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
 });

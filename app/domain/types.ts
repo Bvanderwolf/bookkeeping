@@ -3,6 +3,7 @@ export type EntrySide = "debit" | "credit";
 export type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
 export type ScenarioMode = "tutorial" | "daily" | "practice";
 export type ExerciseSource = "self-made" | "imported";
+export type AppLanguage = "nl" | "en";
 
 export interface SectorDefinition {
   id: SectorId;
@@ -121,6 +122,7 @@ export interface Progress {
 }
 
 export interface AppSnapshot {
+  language?: AppLanguage;
   profile: CompanyProfile | null;
   progress: Progress;
   entries: JournalEntry[];

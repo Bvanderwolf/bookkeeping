@@ -1,4 +1,4 @@
-import type { Account, SectorDefinition } from "./types";
+import type { Account, AppLanguage, SectorDefinition, SectorId } from "./types";
 
 export const SECTORS: SectorDefinition[] = [
   {
@@ -53,10 +53,65 @@ export const ACCOUNTS: Account[] = [
   { id: "marketing", code: "4200", name: "Marketingkosten", type: "expense", normalSide: "debit" },
 ];
 
+const ENGLISH_ACCOUNT_NAMES: Record<string, string> = {
+  bank: "Bank",
+  cash: "Cash",
+  receivables: "Accounts receivable",
+  inventory: "Inventory",
+  equipment: "Equipment",
+  "vat-receivable": "VAT receivable",
+  payables: "Accounts payable",
+  "vat-payable": "VAT payable",
+  capital: "Equity",
+  revenue: "Revenue",
+  purchases: "Purchases",
+  "general-costs": "General expenses",
+  rent: "Rent expense",
+  marketing: "Marketing expense",
+};
+
+const ENGLISH_SECTORS: Record<SectorId, Pick<SectorDefinition, "label" | "shortLabel" | "description" | "offerings">> = {
+  creative: {
+    label: "Creative services",
+    shortLabel: "Creative studio",
+    description: "Work from your own studio and send invoices to clients.",
+    offerings: [
+      { id: "webdesign", label: "Web design" },
+      { id: "photography", label: "Photography" },
+    ],
+  },
+  shop: {
+    label: "Online shop",
+    shortLabel: "Online shop",
+    description: "Buy inventory, pack orders and grow your revenue.",
+    offerings: [
+      { id: "stationery", label: "Stationery" },
+      { id: "interior", label: "Home accessories" },
+    ],
+  },
+  hospitality: {
+    label: "Hospitality",
+    shortLabel: "Coffee & lunch",
+    description: "Run a cosy business with daily sales and purchases.",
+    offerings: [
+      { id: "coffee", label: "Coffee bar" },
+      { id: "lunch", label: "Lunchroom" },
+    ],
+  },
+};
+
+export const accountName = (account: Account, language: AppLanguage) =>
+  language === "en" ? ENGLISH_ACCOUNT_NAMES[account.id] ?? account.name : account.name;
+
+export const sectorsForLanguage = (language: AppLanguage): SectorDefinition[] =>
+  language === "nl"
+    ? SECTORS
+    : SECTORS.map((sector) => ({ ...sector, ...ENGLISH_SECTORS[sector.id] }));
+
 export const accountById = (id: string) => ACCOUNTS.find((account) => account.id === id);
 
-export const formatMoney = (cents: number, showSign = false) =>
-  new Intl.NumberFormat("nl-NL", {
+export const formatMoney = (cents: number, showSign = false, language: AppLanguage = "nl") =>
+  new Intl.NumberFormat(language === "en" ? "en-GB" : "nl-NL", {
     style: "currency",
     currency: "EUR",
     signDisplay: showSign ? "auto" : "never",

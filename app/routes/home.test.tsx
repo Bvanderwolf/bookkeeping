@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshProgress } from "../data/repository";
 import type { AppSnapshot, StoredExercise } from "../domain/types";
 import { PracticeView, ProfileView } from "./home";
+import { LanguageProvider } from "../i18n";
 
 afterEach(cleanup);
 
@@ -111,5 +112,49 @@ describe("oefenruimte", () => {
     const locked = screen.getByRole("heading", { name: "Kleine benodigdheden" }).closest("article");
     expect(within(unlocked!).getByRole("button", { name: /Start/ })).toBeEnabled();
     expect(within(locked!).getByRole("button", { name: "Niveau 2" })).toBeDisabled();
+  });
+
+  it("toont de interface en standaardoefeningen in het Engels zonder eigen oefeningen te vertalen", () => {
+    render(
+      <LanguageProvider language="en">
+        <PracticeView
+          snapshot={{ ...snapshot, language: "en" }}
+          exercises={[selfMadeExercise]}
+          onStartStandard={vi.fn()}
+          onStartExercise={vi.fn()}
+          onManageExercises={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Standard" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "A good workspace" })).toBeVisible();
+    expect(screen.getByText("assets")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Mijn oefening" })).toBeVisible();
+  });
+});
+
+describe("taalinstelling", () => {
+  it("kan vanuit het profiel naar Engels worden gewijzigd", async () => {
+    const onLanguageChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <LanguageProvider language="nl">
+        <ProfileView
+          snapshot={{ ...snapshot, language: "nl" }}
+          exercises={[]}
+          exerciseReturn={null}
+          onExerciseReturnConsumed={vi.fn()}
+          onExport={vi.fn()}
+          onImport={vi.fn()}
+          onReset={vi.fn()}
+          onExerciseExport={vi.fn()}
+          onExerciseImport={vi.fn()}
+          onOpenEditor={vi.fn()}
+          onLanguageChange={onLanguageChange}
+        />
+      </LanguageProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "English" }));
+    expect(onLanguageChange).toHaveBeenCalledWith("en");
   });
 });

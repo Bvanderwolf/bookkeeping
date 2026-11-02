@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
-import { ACCOUNTS, formatMoney } from "../domain/accounts";
+import { ACCOUNTS, accountName, formatMoney } from "../domain/accounts";
+import { useI18n } from "../i18n";
 import { isBalanced, sumSides } from "../domain/accounting";
 import type { JournalLine } from "../domain/types";
 import styles from "./components.module.css";
@@ -40,6 +41,7 @@ export function BookingLinesEditor({
   lines: DraftBookingLine[];
   onChange: (lines: DraftBookingLine[]) => void;
 }) {
+  const { language, t } = useI18n();
   const booking = draftLinesToJournalLines(lines);
   const totals = sumSides(booking);
   const balanced = isBalanced(booking);
@@ -53,34 +55,34 @@ export function BookingLinesEditor({
       <div className={styles.lines}>
         {lines.map((line, index) => (
           <fieldset className={styles.bookingLine} key={line.key}>
-            <legend>Boekingsregel {index + 1}</legend>
+            <legend>{t("Boekingsregel {{number}}", { number: index + 1 })}</legend>
             <label>
-              Rekening
+              {t("Rekening")}
               <select
                 value={line.accountId}
                 onChange={(event) => updateLine(line.key, { accountId: event.target.value })}
               >
-                <option value="">Kies een rekening</option>
+                <option value="">{t("Kies een rekening")}</option>
                 {ACCOUNTS.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.code} · {account.name}
+                    {account.code} · {accountName(account, language)}
                   </option>
                 ))}
               </select>
             </label>
             <div className={styles.lineRow}>
               <label>
-                Zijde
+                {t("Zijde")}
                 <select
                   value={line.side}
                   onChange={(event) => updateLine(line.key, { side: event.target.value as "debit" | "credit" })}
                 >
-                  <option value="debit">Debet</option>
-                  <option value="credit">Credit</option>
+                  <option value="debit">{t("Debet")}</option>
+                  <option value="credit">{t("Credit")}</option>
                 </select>
               </label>
               <label>
-                Bedrag
+                {t("Bedrag")}
                 <span className={styles.moneyInput}>
                   <span>€</span>
                   <input
@@ -96,7 +98,7 @@ export function BookingLinesEditor({
                   type="button"
                   className={styles.removeLine}
                   onClick={() => onChange(lines.filter((item) => item.key !== line.key))}
-                  aria-label={`Verwijder regel ${index + 1}`}
+                  aria-label={t("Verwijder regel {{number}}", { number: index + 1 })}
                 >
                   <Trash2 size={18} />
                 </button>
@@ -112,12 +114,12 @@ export function BookingLinesEditor({
           className={styles.addLine}
           onClick={() => onChange([...lines, newLine(lines.length)])}
         >
-          <Plus size={18} /> Voeg boekingsregel toe
+          <Plus size={18} /> {t("Voeg boekingsregel toe")}
         </button>
       )}
 
       <div className={styles.balanceBar}>
-        <div><span>Debet</span><strong>{formatMoney(totals.debit)}</strong></div>
+        <div><span>{t("Debet")}</span><strong>{formatMoney(totals.debit, false, language)}</strong></div>
         <div className={styles.balanceTrack}>
           <span
             style={{
@@ -129,7 +131,7 @@ export function BookingLinesEditor({
             }}
           />
         </div>
-        <div><span>Credit</span><strong>{formatMoney(totals.credit)}</strong></div>
+        <div><span>{t("Credit")}</span><strong>{formatMoney(totals.credit, false, language)}</strong></div>
       </div>
     </>
   );

@@ -104,7 +104,7 @@
 .tabs { margin-bottom: 12px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; background: #e9ece6; border-radius: 13px; }
 .tabs button { min-height: 42px; color: var(--ink-soft); background: transparent; border: 0; border-radius: 10px; font-weight: 800; cursor: pointer; }
 .tabs .tabActive { color: var(--ink); background: white; box-shadow: 0 3px 10px rgb(23 50 77 / 8%); }
-.statement, .journal, .dataCard, .resetCard, .profileCard { background: var(--paper); border: 1px solid rgb(23 50 77 / 9%); border-radius: 20px; box-shadow: 0 8px 26px rgb(23 50 77 / 6%); }
+.statement, .journal, .dataCard, .resetCard, .profileCard, .languageCard { background: var(--paper); border: 1px solid rgb(23 50 77 / 9%); border-radius: 20px; box-shadow: 0 8px 26px rgb(23 50 77 / 6%); }
 .statement { overflow: hidden; }
 .statementIntro { padding: 20px; display: grid; color: white; background: var(--ink); }
 .statementIntro span { color: #bfe4d1; font-size: 11px; font-weight: 800; text-transform: uppercase; }
@@ -126,6 +126,12 @@
 .profileCard > div { padding: 12px 3px 2px; }
 .profileCard h2 { margin: 0; font-family: "Pixelify Sans", monospace; font-size: 25px; }
 .profileCard p { margin: 2px 0 0; color: var(--ink-soft); font-size: 13px; }
+.languageCard { margin-top: 12px; padding: 16px 18px; display: grid; gap: 12px; }
+.languageCard h2 { margin: 0; font-size: 17px; }
+.languageCard p { margin: 3px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.45; }
+.languageOptions { padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #e9ece6; border-radius: 13px; }
+.languageOptions button { min-height: 42px; color: var(--ink-soft); background: transparent; border: 0; border-radius: 10px; font-weight: 800; cursor: pointer; }
+.languageOptions .languageActive { color: var(--ink); background: white; box-shadow: 0 3px 10px rgb(23 50 77 / 8%); }
 .dataCard { margin-top: 12px; padding: 0 18px; }
 .dataCard summary { min-height: 60px; display: flex; justify-content: space-between; align-items: center; gap: 12px; list-style: none; cursor: pointer; }
 .dataCard summary::-webkit-details-marker { display: none; }

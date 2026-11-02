@@ -5,6 +5,8 @@ import {
   SCENARIO_TEMPLATES,
   createPracticeInstanceForTemplate,
   createScenarioInstance,
+  localizeScenarioInstance,
+  scenarioTemplateTitle,
   standardPracticeTemplates,
   validateScenarioTemplates,
 } from "./scenarios";
@@ -51,5 +53,30 @@ describe("scenario-engine", () => {
     expect(scenario.mode).toBe("practice");
     expect(() => createPracticeInstanceForTemplate(profile, "shop-sale-vat", "2026-10-19", "wrong-sector"))
       .toThrow(/niet beschikbaar/);
+  });
+
+  it("heeft Engelse inhoud voor iedere standaardoefening en lokaliseert bestaande scenario's", () => {
+    for (const template of SCENARIO_TEMPLATES) {
+      expect(scenarioTemplateTitle(template, "en")).not.toBe(template.title);
+      const amountCents = template.amountOptions[0];
+      const localized = localizeScenarioInstance({
+        id: `test-${template.id}`,
+        templateId: template.id,
+        mode: "practice",
+        assignedDate: "2026-10-19",
+        seed: 1,
+        amountCents,
+        title: template.title,
+        story: template.buildStory(amountCents, profile),
+        solution: template.buildSolution(amountCents),
+        hint: template.hint,
+        explanation: template.explanation,
+        sceneEffect: template.sceneEffect,
+      }, profile, "en");
+      expect(localized.story).not.toBe(template.buildStory(amountCents, profile));
+      expect(localized.hint).not.toBe(template.hint);
+      expect(localized.explanation).not.toBe(template.explanation);
+      expect(localized.sceneEffect).not.toBe(template.sceneEffect);
+    }
   });
 });

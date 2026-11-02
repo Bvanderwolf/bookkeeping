@@ -10,6 +10,7 @@ import {
   type DraftBookingLine,
 } from "./BookingLinesEditor";
 import styles from "./components.module.css";
+import { useI18n } from "../i18n";
 
 export function ExerciseEditor({
   onBack,
@@ -18,6 +19,7 @@ export function ExerciseEditor({
   onBack: () => void;
   onSave: (draft: ExerciseDraft) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [kicker, setKicker] = useState("");
   const [title, setTitle] = useState("");
   const [story, setStory] = useState("");
@@ -38,7 +40,7 @@ export function ExerciseEditor({
     try {
       await onSave(parsed.data);
     } catch {
-      setError("De oefening kon niet worden opgeslagen. Probeer het opnieuw.");
+      setError(t("De oefening kon niet worden opgeslagen. Probeer het opnieuw."));
       setSaving(false);
     }
   };
@@ -46,18 +48,18 @@ export function ExerciseEditor({
   return (
     <main className={styles.challengeShell}>
       <header className={styles.challengeHeader}>
-        <button className={styles.iconButton} onClick={onBack} aria-label="Terug naar Profiel">
+        <button className={styles.iconButton} onClick={onBack} aria-label={t("Terug naar Profiel")}>
           <ArrowLeft size={22} />
         </button>
         <div>
-          <span>Oefeningeditor</span>
-          <strong>Nieuwe oefening</strong>
+          <span>{t("Oefeningeditor")}</span>
+          <strong>{t("Nieuwe oefening")}</strong>
         </div>
       </header>
 
       <section className={`${styles.storyCard} ${styles.editorStory}`} aria-labelledby="editor-title">
         <label>
-          Klein kopje
+          {t("Klein kopje")}
           <input
             value={kicker}
             onChange={(event) => setKicker(event.target.value)}
@@ -66,7 +68,7 @@ export function ExerciseEditor({
           />
         </label>
         <label>
-          Hoofdkop
+          {t("Hoofdkop")}
           <input
             id="editor-title"
             value={title}
@@ -75,7 +77,7 @@ export function ExerciseEditor({
           />
         </label>
         <label>
-          Scenario
+          {t("Scenario")}
           <textarea
             value={story}
             onChange={(event) => setStory(event.target.value)}
@@ -89,17 +91,17 @@ export function ExerciseEditor({
         <div className={styles.sectionHeading}>
           <div>
             <span className={styles.stepBadge}>1</span>
-            <h2 id="editor-solution-title">Vul de oplossing in</h2>
+            <h2 id="editor-solution-title">{t("Vul de oplossing in")}</h2>
           </div>
           <span className={balanced ? styles.balanceGood : styles.balanceOpen}>
-            <Scale size={16} /> {balanced ? "In balans" : "Nog niet in balans"}
+            <Scale size={16} /> {balanced ? t("In balans") : t("Nog niet in balans")}
           </span>
         </div>
 
         <BookingLinesEditor lines={lines} onChange={setLines} />
         {error && <p className={styles.editorError} role="alert">{error}</p>}
         <button className={styles.primaryButton} onClick={save} disabled={!valid || saving}>
-          {saving ? "Oefening opslaan…" : "Sla oefening op"}
+          {saving ? t("Oefening opslaan…") : t("Sla oefening op")}
         </button>
       </section>
     </main>
