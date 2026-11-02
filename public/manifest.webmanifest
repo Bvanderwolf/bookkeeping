@@ -1,0 +1,21 @@
+{
+  "name": "Mijn Bedrijf — spelenderwijs boekhouden",
+  "short_name": "Mijn Bedrijf",
+  "description": "Bouw iedere dag aan je bedrijf en leer spelenderwijs boekhouden.",
+  "lang": "nl-NL",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fffaf0",
+  "theme_color": "#17324d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/creative-studio.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
