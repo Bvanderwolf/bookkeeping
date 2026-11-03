@@ -5,6 +5,7 @@ import { freshProgress } from "../data/repository";
 import type { AppSnapshot, StoredExercise } from "../domain/types";
 import { PracticeView, ProfileView } from "./home";
 import { LanguageProvider } from "../i18n";
+import { createPracticeInstanceForTemplate } from "../domain/scenarios";
 
 afterEach(cleanup);
 
@@ -129,9 +130,34 @@ describe("oefenruimte", () => {
     const unlocked = screen.getByRole("heading", { name: "Een goede werkplek" }).closest("article");
     const locked = screen.getByRole("heading", { name: "Kleine benodigdheden" }).closest("article");
     expect(within(unlocked!).getByRole("button", { name: /Start/ })).toBeEnabled();
+    expect(within(unlocked!).getByRole("img", { name: "Nog niet geopend" })).toBeVisible();
     expect(within(locked!).getByRole("button", { name: "Niveau 1" })).toBeDisabled();
+    expect(within(locked!).getByRole("img", { name: "Nog vergrendeld" })).toBeVisible();
     await user.click(within(unlocked!).getByRole("button", { name: /Start/ }));
     expect(onStartStandard).toHaveBeenCalledWith("buy-equipment");
+  });
+
+  it.each([
+    { completed: false, label: "Geopend, nog niet afgerond" },
+    { completed: true, label: "Afgerond" },
+  ])("toont $label na openen, ook bij opnieuw oefenen", ({ completed, label }) => {
+    const instance = createPracticeInstanceForTemplate(snapshot.profile!, "buy-equipment", "2026-11-03", "opened");
+    render(
+      <PracticeView
+        snapshot={{
+          ...snapshot,
+          progress: { ...snapshot.progress, completedTemplateIds: completed ? ["buy-equipment"] : [] },
+          instances: [instance],
+        }}
+        exercises={[]}
+        onStartStandard={vi.fn()}
+        onStartExercise={vi.fn()}
+        onManageExercises={vi.fn()}
+      />,
+    );
+    const exercise = screen.getByRole("heading", { name: "Een goede werkplek" }).closest("article")!;
+    expect(within(exercise).getByRole("img", { name: label })).toBeVisible();
+    expect(within(exercise).getByRole("button", { name: /Start/ })).toBeEnabled();
   });
 
   it("toont de interface en standaardoefeningen in het Engels zonder eigen oefeningen te vertalen", () => {
@@ -149,6 +175,7 @@ describe("oefenruimte", () => {
     expect(screen.getByRole("heading", { name: "Standard" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "A good workspace" })).toBeVisible();
     expect(screen.getByText("assets")).toBeVisible();
+    expect(screen.getByRole("img", { name: "Not yet opened" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Mijn oefening" })).toBeVisible();
   });
 });

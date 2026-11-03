@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight, BarChart3, BookOpen, Briefcase, Building2, CalendarDays, Camera,
-  CheckCircle2, ChevronDown, Coffee, Download, FileJson, Lamp, Lock, Monitor,
+  CheckCircle2, CircleHelp, CircleX, ChevronDown, Coffee, Download, FileJson, Lamp, Lock, Monitor,
   Package, PencilLine, RotateCcw, ShoppingBag, Sparkles, Star, TrendingUp,
   Upload, User, WalletCards,
 } from "lucide-react";
@@ -311,6 +311,11 @@ export function PracticeView({
   const profile = snapshot.profile!;
   const level = snapshot.progress.unlockedLevel;
   const standard = standardPracticeTemplates(profile);
+  const openedTemplateIds = new Set(snapshot.instances.map((instance) => instance.templateId));
+  const completedTemplateIds = new Set([
+    ...snapshot.progress.completedTemplateIds,
+    ...snapshot.instances.filter((instance) => instance.completedAt).map((instance) => instance.templateId),
+  ]);
   const selfMade = exercises.filter((exercise) => exercise.source === "self-made");
   const imported = exercises.filter((exercise) => exercise.source === "imported");
 
@@ -341,9 +346,15 @@ export function PracticeView({
               <div className={styles.exerciseList}>
                 {standard.filter((template) => template.level === practiceLevel).map((template) => {
                   const locked = template.level > level;
+                  const completed = completedTemplateIds.has(template.id);
+                  const opened = openedTemplateIds.has(template.id);
+                  const statusLabel = t(locked ? "Nog vergrendeld" : completed ? "Afgerond" : opened ? "Geopend, nog niet afgerond" : "Nog niet geopend");
+                  const statusClass = locked || completed ? "" : opened ? styles.exerciseIconIncomplete : styles.exerciseIconNew;
                   return (
                     <article className={locked ? styles.exerciseCardLocked : styles.exerciseCard} key={template.id}>
-                      <span className={styles.exerciseIcon}>{locked ? <Lock size={19} /> : <CheckCircle2 size={20} />}</span>
+                      <span className={`${styles.exerciseIcon} ${statusClass}`} role="img" aria-label={statusLabel} title={statusLabel}>
+                        {locked ? <Lock size={19} aria-hidden="true" /> : completed ? <CheckCircle2 size={20} aria-hidden="true" /> : opened ? <CircleX size={20} aria-hidden="true" /> : <CircleHelp size={20} aria-hidden="true" />}
+                      </span>
                       <div>
                         <h3>{scenarioTemplateTitle(template, language)}</h3>
                         <p>{scenarioConcept(template.concept, language)}</p>

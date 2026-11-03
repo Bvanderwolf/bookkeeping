@@ -63,5 +63,5 @@ De app toont op ieder scherm een klein, ingetogen versienummer rechtsonder. Deze
 ## Aannames
 
 - Voor niveau 3 geldt hetzelfde leerpad als voor niveau 2: alle oefeningen van het vorige niveau moeten zijn afgerond.
-- Het vink-icoon op een beschikbare standaardkaart betekent in de huidige interface **beschikbaar**, niet **afgerond**.
+- De status van een standaardoefening is zichtbaar via een icoon met een toegankelijk label en tooltip: blauw vraagteken voor nog niet geopend, rood kruis voor geopend maar nog niet afgerond, groen vinkje voor afgerond. Vergrendelde oefeningen behouden het grijze slot. Eenmaal afgeronde oefeningen blijven groen bij herhaling. De status wordt afgeleid uit opgeslagen scenario’s en afgeronde template-ID’s en blijft bij herladen behouden.
 - Het maximum blijft niveau 3 zolang de meegeleverde templates maximaal niveau 3 hebben.

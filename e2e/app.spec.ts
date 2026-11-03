@@ -111,7 +111,7 @@ test("na wissen kan in dezelfde sessie een nieuw fotografiebedrijf worden aangem
 
 test("Een goede werkplek ontgrendelt niveau 1 en toont de appversie", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByLabel("Versie / Version 0.1.1")).toBeVisible();
+  await expect(page.getByLabel("Versie / Version 0.1.2")).toBeVisible();
   await chooseDutch(page);
   await page.getByLabel("Bedrijfsnaam").fill("Oefenbedrijf");
   await page.getByRole("button", { name: /Kies mijn sector/ }).click();
@@ -134,7 +134,15 @@ test("Een goede werkplek ontgrendelt niveau 1 en toont de appversie", async ({ p
   await level1Panel.locator("summary").click();
   const level1Exercise = page.getByRole("heading", { name: "Kleine benodigdheden" }).locator("..").locator("..");
   await expect(level1Exercise.getByRole("button", { name: "Niveau 1" })).toBeDisabled();
-  await page.getByRole("heading", { name: "Een goede werkplek" }).locator("..").locator("..").getByRole("button", { name: "Start" }).click();
+  const workspaceExercise = page.getByRole("heading", { name: "Een goede werkplek" }).locator("..").locator("..");
+  await expect(workspaceExercise.getByRole("img", { name: "Nog niet geopend" })).toBeVisible();
+  await workspaceExercise.getByRole("button", { name: "Start" }).click();
+  await page.getByRole("button", { name: "Terug" }).click();
+  await expect(workspaceExercise.getByRole("img", { name: "Geopend, nog niet afgerond" })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Oefenen" }).click();
+  await expect(workspaceExercise.getByRole("img", { name: "Geopend, nog niet afgerond" })).toBeVisible();
+  await workspaceExercise.getByRole("button", { name: "Start" }).click();
 
   const story = await page.getByText(/Je koopt zonder btw-oefening inventaris/).innerText();
   const amount = story.match(/€\s*([\d.]+,\d{2})/)?.[1];
@@ -149,6 +157,12 @@ test("Een goede werkplek ontgrendelt niveau 1 en toont de appversie", async ({ p
   await expect(level1Panel).toHaveAttribute("open", "");
   await expect(level1Exercise.getByRole("button", { name: "Start" })).toBeEnabled();
   await expect(page.getByText("Niveau 1", { exact: true }).first()).toBeVisible();
+  await level0Panel.locator("summary").click();
+  await expect(workspaceExercise.getByRole("img", { name: "Afgerond" })).toBeVisible();
+  await workspaceExercise.getByRole("button", { name: "Start" }).click();
+  await page.getByRole("button", { name: "Terug" }).click();
+  await level0Panel.locator("summary").click();
+  await expect(workspaceExercise.getByRole("img", { name: "Afgerond" })).toBeVisible();
 });
 
 test("zelfgemaakte en geïmporteerde oefeningen blijven buiten de leerprogressie", async ({ page }) => {

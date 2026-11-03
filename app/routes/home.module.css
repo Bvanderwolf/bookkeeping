@@ -100,6 +100,8 @@
 .exerciseCard, .exerciseCardLocked { min-height: 76px; padding: 12px; display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 10px; background: var(--paper); border: 1px solid rgb(23 50 77 / 9%); border-radius: 15px; box-shadow: 0 5px 18px rgb(23 50 77 / 5%); }
 .exerciseCardLocked { opacity: .62; }
 .exerciseIcon { width: 42px; height: 42px; display: grid; place-items: center; color: var(--mint-dark); background: #e7f4ed; border-radius: 12px; }
+.exerciseIconNew { color: #2563b5; background: #e6effc; }
+.exerciseIconIncomplete { color: #bd3636; background: #fce8e8; }
 .exerciseCardLocked .exerciseIcon { color: var(--ink-soft); background: #eceeea; }
 .exerciseCard h3, .exerciseCardLocked h3 { margin: 0; font-size: 14px; }
 .exerciseCard p, .exerciseCardLocked p { margin: 3px 0 0; color: var(--ink-soft); font-size: 11px; text-transform: capitalize; }
