@@ -18,16 +18,16 @@ De app toont op ieder scherm een klein, ingetogen versienummer rechtsonder. Deze
 
 1. Na het aanmaken van een bedrijf is **Oefenen** bereikbaar via de hoofdnavigatie en toont de pagina het huidige niveau en het aantal unieke beheerste onderwerpen.
 2. De pagina toont de secties **Standaard**, **Zelfgemaakt** en **Geïmporteerd**, in die volgorde, zoals vastgelegd in spec 0002.
-3. **Standaard** toont de meegeleverde oefeningen die passen bij de gekozen sector. De eerste boeking (`start-capital`) staat niet in de oefenlijst.
+3. **Standaard** toont de meegeleverde oefeningen die passen bij de gekozen sector, gegroepeerd in afzonderlijk uitklapbare panelen van niveau 0 tot en met 3. Het huidige niveau staat bij openen van de pagina uitgeklapt; de andere niveaus zijn ingeklapt. Niveau 0 bevat alleen **Een goede werkplek** (`buy-equipment`). De eerste boeking (`start-capital`) staat niet in de oefenlijst.
 4. Een standaardoefening met een niveau hoger dan het ontgrendelde niveau heeft een uitgeschakelde startknop met het vereiste niveau. Een beschikbare standaardoefening kan opnieuw worden gestart.
 5. Zelfgemaakte en geïmporteerde oefeningen zijn direct speelbaar en volgen geen niveau- of sectorontgrendeling.
 
 ### Voortgang en ontgrendeling
 
-6. De app bewaart de leerprogressie lokaal als één `Progress`-record in IndexedDB. Bij een nieuw bedrijf begint dat record op niveau 1, met nul geslaagde scenario's en lege lijsten van afgeronde standaardoefeningen en beheerste onderwerpen.
+6. De app bewaart de leerprogressie lokaal als één `Progress`-record in IndexedDB. Bij een nieuw bedrijf begint dat record op niveau 0, met nul geslaagde scenario's en lege lijsten van afgeronde standaardoefeningen en beheerste onderwerpen.
 7. Een correcte afronding van de eerste boeking, een dagelijks scenario of een standaardoefening verhoogt `successfulScenarios` met één. Foute pogingen verhogen deze teller niet.
-8. Niveau 2 wordt beschikbaar na een correcte afronding van **Een goede werkplek** (`buy-equipment`). De eerste boeking alleen ontgrendelt niveau 2 niet.
-9. Niveau 3 wordt beschikbaar zodra alle vier verschillende standaardoefeningen van niveau 2 minstens eenmaal correct zijn afgerond. Niveau 4 volgt nadat alle vier verschillende standaardoefeningen van niveau 3 zijn afgerond.
+8. Niveau 1 wordt beschikbaar na een correcte afronding van **Een goede werkplek** (`buy-equipment`). De eerste boeking alleen ontgrendelt niveau 1 niet.
+9. Niveau 2 wordt beschikbaar zodra alle vier verschillende standaardoefeningen van niveau 1 minstens eenmaal correct zijn afgerond. Niveau 3 volgt nadat alle vier verschillende standaardoefeningen van niveau 2 zijn afgerond.
 10. Herhaling van een standaardoefening verhoogt `successfulScenarios` opnieuw, maar versnelt de ontgrendeling niet. Dagelijkse scenario's kunnen een standaardoefening afronden en tellen dan mee voor de ontgrendeling van die specifieke oefening.
 11. Bij een correcte afronding worden de template-ID en het concept aan respectievelijk `completedTemplateIds` en `masteredConcepts` toegevoegd, zonder duplicaten. Het getal **onderwerpen onder de knie** is de lengte van `masteredConcepts`.
 12. Een zelfgemaakte of geïmporteerde oefening slaat geen poging of afronding op en verandert de leerprogressie niet.
@@ -50,9 +50,9 @@ De app toont op ieder scherm een klein, ingetogen versienummer rechtsonder. Deze
 
 ## Testscenario's
 
-- Een nieuw bedrijf ziet niveau 1; oefeningen op hogere niveaus zijn zichtbaar maar niet startbaar.
-- Na **Een goede werkplek** komt niveau 2 beschikbaar, ook als dit pas het tweede succes inclusief de eerste boeking is.
-- Na alle vier verschillende niveau 2 oefeningen komt niveau 3 beschikbaar; drie van de vier zijn onvoldoende. Hetzelfde geldt voor niveau 3 en niveau 4.
+- Een nieuw bedrijf ziet niveau 0; oefeningen op hogere niveaus zijn zichtbaar maar niet startbaar.
+- Na **Een goede werkplek** komt niveau 1 beschikbaar, ook als dit pas het tweede succes inclusief de eerste boeking is.
+- Na alle vier verschillende niveau 1 oefeningen komt niveau 2 beschikbaar; drie van de vier zijn onvoldoende. Hetzelfde geldt voor niveau 2 en niveau 3.
 - Een fout antwoord verandert de progressieteller niet; het nogmaals correct afronden van dezelfde standaardoefening verhoogt de teller zonder een nieuw niveau vrij te geven.
 - Een correcte standaardoefening verhoogt de leerprogressie zonder een bedrijfsboeking of groeidag toe te voegen.
 - Een zelfgemaakte of geïmporteerde oefening verandert de leerprogressie niet.
@@ -62,6 +62,6 @@ De app toont op ieder scherm een klein, ingetogen versienummer rechtsonder. Deze
 
 ## Aannames
 
-- Voor niveau 4 geldt hetzelfde leerpad als voor niveau 3: alle oefeningen van het vorige niveau moeten zijn afgerond.
+- Voor niveau 3 geldt hetzelfde leerpad als voor niveau 2: alle oefeningen van het vorige niveau moeten zijn afgerond.
 - Het vink-icoon op een beschikbare standaardkaart betekent in de huidige interface **beschikbaar**, niet **afgerond**.
-- Het maximum blijft niveau 4 zolang de meegeleverde templates maximaal niveau 4 hebben.
+- Het maximum blijft niveau 3 zolang de meegeleverde templates maximaal niveau 3 hebben.

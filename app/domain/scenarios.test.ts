@@ -27,7 +27,7 @@ describe("scenario-engine", () => {
   });
 
   it("genereert hetzelfde dagscenario met dezelfde invoer", () => {
-    const progress = { ...freshProgress(), unlockedLevel: 4 as const };
+    const progress = { ...freshProgress(), unlockedLevel: 3 as const };
     expect(createScenarioInstance(profile, progress, "daily", "2026-10-19"))
       .toEqual(createScenarioInstance(profile, progress, "daily", "2026-10-19"));
   });
@@ -35,7 +35,7 @@ describe("scenario-engine", () => {
   it("selecteert geen scenario uit een andere sector", () => {
     const progress = {
       ...freshProgress(),
-      unlockedLevel: 4 as const,
+      unlockedLevel: 3 as const,
       completedTemplateIds: SCENARIO_TEMPLATES.filter((item) => !item.sectorIds?.includes("creative")).map((item) => item.id),
     };
     const scenario = createScenarioInstance(profile, progress, "practice", "2026-10-19", "sector-test");
@@ -57,15 +57,17 @@ describe("scenario-engine", () => {
   });
 
   it("ontgrendelt niveaus na alle unieke standaardoefeningen van het vorige niveau", () => {
+    const level1 = SCENARIO_TEMPLATES.filter((template) => template.level === 1).map((template) => template.id);
     const level2 = SCENARIO_TEMPLATES.filter((template) => template.level === 2).map((template) => template.id);
-    const level3 = SCENARIO_TEMPLATES.filter((template) => template.level === 3).map((template) => template.id);
 
-    expect(unlockedLevelFor(["start-capital"], profile.sectorId)).toBe(1);
-    expect(unlockedLevelFor(["buy-equipment"], profile.sectorId)).toBe(2);
-    expect(unlockedLevelFor(["buy-equipment", "buy-equipment", ...level2.slice(0, -1)], profile.sectorId)).toBe(2);
-    expect(unlockedLevelFor(["buy-equipment", ...level2], profile.sectorId)).toBe(3);
-    expect(unlockedLevelFor(["buy-equipment", ...level2, ...level3.slice(0, -1)], profile.sectorId)).toBe(3);
-    expect(unlockedLevelFor(["buy-equipment", ...level2, ...level3], profile.sectorId)).toBe(4);
+    expect(standardPracticeTemplates(profile).filter((template) => template.level === 0).map((template) => template.id)).toEqual(["buy-equipment"]);
+    expect(unlockedLevelFor([], profile.sectorId)).toBe(0);
+    expect(unlockedLevelFor(["start-capital"], profile.sectorId)).toBe(0);
+    expect(unlockedLevelFor(["buy-equipment"], profile.sectorId)).toBe(1);
+    expect(unlockedLevelFor(["buy-equipment", "buy-equipment", ...level1.slice(0, -1)], profile.sectorId)).toBe(1);
+    expect(unlockedLevelFor(["buy-equipment", ...level1], profile.sectorId)).toBe(2);
+    expect(unlockedLevelFor(["buy-equipment", ...level1, ...level2.slice(0, -1)], profile.sectorId)).toBe(2);
+    expect(unlockedLevelFor(["buy-equipment", ...level1, ...level2], profile.sectorId)).toBe(3);
   });
 
   it("heeft Engelse inhoud voor iedere standaardoefening en lokaliseert bestaande scenario's", () => {

@@ -74,7 +74,7 @@ export interface JournalEntry {
 
 export interface ScenarioTemplate {
   id: string;
-  level: 1 | 2 | 3 | 4;
+  level: 0 | 1 | 2 | 3;
   concept: string;
   title: string;
   sectorIds?: SectorId[];
@@ -112,7 +112,7 @@ export interface Attempt {
 
 export interface Progress {
   id: "progress";
-  unlockedLevel: 1 | 2 | 3 | 4;
+  unlockedLevel: 0 | 1 | 2 | 3;
   successfulScenarios: number;
   completedTemplateIds: string[];
   masteredConcepts: string[];

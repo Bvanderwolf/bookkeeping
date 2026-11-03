@@ -92,12 +92,14 @@ describe("profielbeheer", () => {
 });
 
 describe("oefenruimte", () => {
-  it("toont de drie bronnen, individuele oefeningen en niveauvergrendeling", () => {
+  it("toont uitklapbare niveaus vanaf 0, de drie bronnen en niveauvergrendeling", async () => {
+    const user = userEvent.setup();
+    const onStartStandard = vi.fn();
     render(
       <PracticeView
         snapshot={snapshot}
         exercises={[selfMadeExercise]}
-        onStartStandard={vi.fn()}
+        onStartStandard={onStartStandard}
         onStartExercise={vi.fn()}
         onManageExercises={vi.fn()}
       />,
@@ -108,10 +110,28 @@ describe("oefenruimte", () => {
     expect(screen.getByRole("heading", { name: "Mijn oefening" })).toBeVisible();
     expect(screen.getByText("Je hebt nog geen oefeningen geïmporteerd.")).toBeVisible();
 
+    const panels = document.querySelectorAll("details");
+    expect(panels).toHaveLength(4);
+    expect([...panels].map((panel) => panel.querySelector("summary")?.textContent)).toEqual([
+      "Niveau 0", "Niveau 1", "Niveau 2", "Niveau 3",
+    ]);
+    expect(panels[0]).toHaveAttribute("open");
+    expect(within(panels[0]).getAllByRole("heading")).toHaveLength(1);
+    for (const panel of [...panels].slice(1)) expect(panel).not.toHaveAttribute("open");
+    expect(screen.queryByRole("heading", { name: "Je eerste startkapitaal" })).not.toBeInTheDocument();
+    await user.click(panels[0].querySelector("summary")!);
+    expect(panels[0]).not.toHaveAttribute("open");
+    await user.click(panels[0].querySelector("summary")!);
+    await user.click(panels[1].querySelector("summary")!);
+    expect(panels[0]).toHaveAttribute("open");
+    expect(panels[1]).toHaveAttribute("open");
+
     const unlocked = screen.getByRole("heading", { name: "Een goede werkplek" }).closest("article");
     const locked = screen.getByRole("heading", { name: "Kleine benodigdheden" }).closest("article");
     expect(within(unlocked!).getByRole("button", { name: /Start/ })).toBeEnabled();
-    expect(within(locked!).getByRole("button", { name: "Niveau 2" })).toBeDisabled();
+    expect(within(locked!).getByRole("button", { name: "Niveau 1" })).toBeDisabled();
+    await user.click(within(unlocked!).getByRole("button", { name: /Start/ }));
+    expect(onStartStandard).toHaveBeenCalledWith("buy-equipment");
   });
 
   it("toont de interface en standaardoefeningen in het Engels zonder eigen oefeningen te vertalen", () => {

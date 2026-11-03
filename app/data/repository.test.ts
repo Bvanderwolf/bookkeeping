@@ -59,11 +59,11 @@ describe("IndexedDB-repository", () => {
     await repository.saveProgress({
       ...freshProgress(),
       successfulScenarios: 9,
-      unlockedLevel: 4,
+      unlockedLevel: 3,
       completedTemplateIds: ["start-capital", "buy-equipment"],
     });
 
-    expect((await repository.load()).progress.unlockedLevel).toBe(2);
+    expect((await repository.load()).progress.unlockedLevel).toBe(1);
   });
 
   it("bewaart de taalkeuze ook wanneer het bedrijf wordt gewist", async () => {

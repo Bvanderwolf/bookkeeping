@@ -32,7 +32,7 @@ interface ScenarioTranslation {
 export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   {
     id: "start-capital",
-    level: 1,
+    level: 0,
     concept: "eigen-vermogen",
     title: "Je eerste startkapitaal",
     amountOptions: [500_000],
@@ -45,7 +45,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "buy-equipment",
-    level: 1,
+    level: 0,
     concept: "bezittingen",
     title: "Een goede werkplek",
     amountOptions: [60_000, 75_000, 90_000],
@@ -57,7 +57,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "office-costs",
-    level: 2,
+    level: 1,
     concept: "kosten",
     title: "Kleine benodigdheden",
     amountOptions: [4_500, 6_000, 7_500],
@@ -69,7 +69,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "cash-sale",
-    level: 2,
+    level: 1,
     concept: "omzet",
     title: "Je eerste verkoop",
     amountOptions: [12_000, 18_000, 24_000],
@@ -81,7 +81,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "pay-rent",
-    level: 2,
+    level: 1,
     concept: "kosten",
     title: "De huur is betaald",
     amountOptions: [65_000, 80_000, 95_000],
@@ -93,7 +93,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "customer-invoice",
-    level: 3,
+    level: 2,
     concept: "debiteuren",
     title: "Factuur naar een klant",
     amountOptions: [45_000, 70_000, 95_000],
@@ -105,7 +105,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "customer-payment",
-    level: 3,
+    level: 2,
     concept: "debiteuren",
     title: "Klant betaalt factuur",
     amountOptions: [45_000, 70_000, 95_000],
@@ -117,7 +117,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "supplier-invoice",
-    level: 3,
+    level: 2,
     concept: "crediteuren",
     title: "Rekening van een leverancier",
     amountOptions: [22_000, 30_000, 42_000],
@@ -129,7 +129,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "pay-supplier",
-    level: 3,
+    level: 2,
     concept: "crediteuren",
     title: "Leverancier betaald",
     amountOptions: [22_000, 30_000, 42_000],
@@ -141,7 +141,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "marketing-campaign",
-    level: 2,
+    level: 1,
     concept: "kosten",
     title: "Je bedrijf in de schijnwerpers",
     amountOptions: [15_000, 20_000, 25_000],
@@ -153,7 +153,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "creative-camera-vat",
-    level: 4,
+    level: 3,
     concept: "btw-inkoop",
     title: "Nieuwe creatieve apparatuur",
     sectorIds: ["creative"],
@@ -166,7 +166,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "creative-invoice-vat",
-    level: 4,
+    level: 3,
     concept: "btw-verkoop",
     title: "Project opgeleverd",
     sectorIds: ["creative"],
@@ -179,7 +179,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "shop-inventory-vat",
-    level: 4,
+    level: 3,
     concept: "btw-inkoop",
     title: "Voorraad aangevuld",
     sectorIds: ["shop"],
@@ -192,7 +192,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "shop-sale-vat",
-    level: 4,
+    level: 3,
     concept: "btw-verkoop",
     title: "Een mooie webshopbestelling",
     sectorIds: ["shop"],
@@ -205,7 +205,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "hospitality-sale-vat",
-    level: 4,
+    level: 3,
     concept: "btw-verkoop",
     title: "Drukke lunch",
     sectorIds: ["hospitality"],
@@ -218,7 +218,7 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   },
   {
     id: "hospitality-purchase-vat",
-    level: 4,
+    level: 3,
     concept: "btw-inkoop",
     title: "Verse ingrediënten",
     sectorIds: ["hospitality"],
@@ -392,7 +392,7 @@ export function localizeScenarioInstance(instance: ScenarioInstance, profile: Co
 
 const staticTemplateSchema = z.object({
   id: z.string().min(1),
-  level: z.number().int().min(1).max(4),
+  level: z.number().int().min(0).max(3),
   concept: z.string().min(1),
   title: z.string().min(1),
   amountOptions: z.array(z.number().int().positive()).min(1),
@@ -474,11 +474,11 @@ export function unlockedLevelFor(completedTemplateIds: string[], sectorId: Secto
       template.id !== "start-capital" &&
       (!template.sectorIds || template.sectorIds.includes(sectorId)),
   );
-  for (const level of [1, 2, 3] as const) {
+  for (const level of [0, 1, 2] as const) {
     const required = available.filter((template) => template.level === level);
     if (!required.length || required.some((template) => !completed.has(template.id))) return level;
   }
-  return 4;
+  return 3;
 }
 
 export function createPracticeInstanceForTemplate(

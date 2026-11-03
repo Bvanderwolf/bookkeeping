@@ -330,23 +330,34 @@ export function PracticeView({
       </section>
 
       <ExerciseSection title={t("Standaard")} description={t("Oefeningen die met Mijn Bedrijf worden meegeleverd.")}>
-        <div className={styles.exerciseList}>
-          {standard.map((template) => {
-            const locked = template.level > level;
-            return (
-              <article className={locked ? styles.exerciseCardLocked : styles.exerciseCard} key={template.id}>
-                <span className={styles.exerciseIcon}>{locked ? <Lock size={19} /> : <CheckCircle2 size={20} />}</span>
-                <div>
-                  <h3>{scenarioTemplateTitle(template, language)}</h3>
-                  <p>{scenarioConcept(template.concept, language)}</p>
-                </div>
-                <button disabled={locked} onClick={() => onStartStandard(template.id)}>
-                  {locked ? t("Niveau {{level}}", { level: template.level }) : t("Start")}
-                  {!locked && <ArrowRight size={17} />}
-                </button>
-              </article>
-            );
-          })}
+        <div className={styles.levelList}>
+          {[...new Set(standard.map((template) => template.level))].sort((a, b) => a - b).map((practiceLevel) => (
+            <details className={styles.levelPanel} key={practiceLevel} open={practiceLevel === level}>
+              <summary>
+                <span>{t("Niveau {{level}}", { level: practiceLevel })}</span>
+                {practiceLevel > level && <Lock size={16} aria-hidden="true" />}
+                <ChevronDown className={styles.levelChevron} size={20} aria-hidden="true" />
+              </summary>
+              <div className={styles.exerciseList}>
+                {standard.filter((template) => template.level === practiceLevel).map((template) => {
+                  const locked = template.level > level;
+                  return (
+                    <article className={locked ? styles.exerciseCardLocked : styles.exerciseCard} key={template.id}>
+                      <span className={styles.exerciseIcon}>{locked ? <Lock size={19} /> : <CheckCircle2 size={20} />}</span>
+                      <div>
+                        <h3>{scenarioTemplateTitle(template, language)}</h3>
+                        <p>{scenarioConcept(template.concept, language)}</p>
+                      </div>
+                      <button disabled={locked} onClick={() => onStartStandard(template.id)}>
+                        {locked ? t("Niveau {{level}}", { level: template.level }) : t("Start")}
+                        {!locked && <ArrowRight size={17} />}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            </details>
+          ))}
         </div>
       </ExerciseSection>
 

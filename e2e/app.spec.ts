@@ -109,9 +109,9 @@ test("na wissen kan in dezelfde sessie een nieuw fotografiebedrijf worden aangem
   expect(pageErrors).toEqual([]);
 });
 
-test("Een goede werkplek ontgrendelt niveau 2 en toont de appversie", async ({ page }) => {
+test("Een goede werkplek ontgrendelt niveau 1 en toont de appversie", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByLabel("Versie / Version 0.1.0")).toBeVisible();
+  await expect(page.getByLabel("Versie / Version 0.1.1")).toBeVisible();
   await chooseDutch(page);
   await page.getByLabel("Bedrijfsnaam").fill("Oefenbedrijf");
   await page.getByRole("button", { name: /Kies mijn sector/ }).click();
@@ -126,8 +126,14 @@ test("Een goede werkplek ontgrendelt niveau 2 en toont de appversie", async ({ p
   await page.getByRole("button", { name: "Bekijk mijn bedrijf" }).click();
 
   await page.getByRole("button", { name: "Oefenen" }).click();
-  const level2Exercise = page.getByRole("heading", { name: "Kleine benodigdheden" }).locator("..").locator("..");
-  await expect(level2Exercise.getByRole("button", { name: "Niveau 2" })).toBeDisabled();
+  const level0Panel = page.locator("details").filter({ has: page.locator("summary", { hasText: "Niveau 0" }) });
+  const level1Panel = page.locator("details").filter({ has: page.locator("summary", { hasText: "Niveau 1" }) });
+  await expect(level0Panel).toHaveAttribute("open", "");
+  await expect(level0Panel.getByRole("heading")).toHaveCount(1);
+  await expect(level1Panel).not.toHaveAttribute("open", "");
+  await level1Panel.locator("summary").click();
+  const level1Exercise = page.getByRole("heading", { name: "Kleine benodigdheden" }).locator("..").locator("..");
+  await expect(level1Exercise.getByRole("button", { name: "Niveau 1" })).toBeDisabled();
   await page.getByRole("heading", { name: "Een goede werkplek" }).locator("..").locator("..").getByRole("button", { name: "Start" }).click();
 
   const story = await page.getByText(/Je koopt zonder btw-oefening inventaris/).innerText();
@@ -140,8 +146,9 @@ test("Een goede werkplek ontgrendelt niveau 2 en toont de appversie", async ({ p
   await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
   await page.getByRole("button", { name: "Verder oefenen" }).click();
 
-  await expect(level2Exercise.getByRole("button", { name: "Start" })).toBeEnabled();
-  await expect(page.getByText("Niveau 2", { exact: true }).first()).toBeVisible();
+  await expect(level1Panel).toHaveAttribute("open", "");
+  await expect(level1Exercise.getByRole("button", { name: "Start" })).toBeEnabled();
+  await expect(page.getByText("Niveau 1", { exact: true }).first()).toBeVisible();
 });
 
 test("zelfgemaakte en geïmporteerde oefeningen blijven buiten de leerprogressie", async ({ page }) => {

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Check, Lightbulb, Scale } from "lucide-react";
 import { accountById, accountName, formatMoney } from "../domain/accounts";
 import { useI18n } from "../i18n";
+import { SCENARIO_TEMPLATES } from "../domain/scenarios";
 import { isBalanced, sameBooking } from "../domain/accounting";
 import type { ScenarioInstance } from "../domain/types";
 import {
@@ -96,7 +97,7 @@ export function BookingChallenge({
         </button>
         <div>
           <span>{presentation?.headerLabel ?? (scenario.mode === "practice" ? t("Oefenscenario") : scenario.mode === "tutorial" ? t("Eerste boeking") : t("Scenario van vandaag"))}</span>
-          <strong>{presentation?.metaLabel ?? t("Niveau {{level}}", { level: scenario.templateId.includes("vat") ? 4 : "1–3" })}</strong>
+          <strong>{presentation?.metaLabel ?? t("Niveau {{level}}", { level: SCENARIO_TEMPLATES.find((template) => template.id === scenario.templateId)?.level ?? 0 })}</strong>
         </div>
       </header>
 

@@ -88,6 +88,14 @@
 .exerciseSection > header { margin-bottom: 9px; }
 .exerciseSection > header h2 { margin: 0; font-size: 19px; }
 .exerciseSection > header p { margin: 3px 0 0; color: var(--ink-soft); font-size: 12px; }
+.levelList { display: grid; gap: 10px; }
+.levelPanel { background: var(--paper); border: 1px solid rgb(23 50 77 / 12%); border-radius: 16px; overflow: hidden; }
+.levelPanel > summary { min-height: 56px; padding: 14px 16px; display: flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 800; cursor: pointer; list-style: none; }
+.levelPanel > summary::-webkit-details-marker { display: none; }
+.levelPanel > summary:focus-visible { outline: 2px solid var(--mint-dark); outline-offset: -4px; border-radius: 14px; }
+.levelChevron { margin-left: auto; transition: transform .15s ease; }
+.levelPanel[open] > summary .levelChevron { transform: rotate(180deg); }
+.levelPanel > .exerciseList { padding: 0 10px 10px; }
 .exerciseList { display: grid; gap: 8px; }
 .exerciseCard, .exerciseCardLocked { min-height: 76px; padding: 12px; display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 10px; background: var(--paper); border: 1px solid rgb(23 50 77 / 9%); border-radius: 15px; box-shadow: 0 5px 18px rgb(23 50 77 / 5%); }
 .exerciseCardLocked { opacity: .62; }

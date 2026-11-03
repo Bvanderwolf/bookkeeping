@@ -22,7 +22,7 @@ interface SettingRecord {
 
 export const freshProgress = (): Progress => ({
   id: "progress",
-  unlockedLevel: 1,
+  unlockedLevel: 0,
   successfulScenarios: 0,
   completedTemplateIds: [],
   masteredConcepts: [],
