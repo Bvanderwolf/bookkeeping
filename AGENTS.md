@@ -6,3 +6,4 @@ This application is deployed as a static GitHub Pages site under a repository su
 - Resolve routes, assets, the manifest, and service-worker URLs through Vite's `BASE_URL` / the configured `BASE_PATH`.
 - Preserve SPA refresh and offline behavior under `/<repository-name>/`, not only at `/`.
 - Before completing a production-facing change, run `BASE_PATH=/bookkeeping/ npm run build` in addition to the relevant tests and type checks.
+- For every application change, increment the patch number in `app/version.ts`; the app displays it at the bottom right.

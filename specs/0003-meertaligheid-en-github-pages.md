@@ -17,6 +17,7 @@ De taalkeuze geldt voor:
 - rekeningnamen, debet/credit-termen, bedragen en datumweergave;
 - titels, conceptnamen, verhalen, hints, uitleg en bedrijfseffecten van alle standaardoefeningen;
 - de HTML-taalaanduiding, documenttitel en paginabeschrijving nadat de app is geladen.
+- de toegankelijke aanduiding van het globale versienummer, dat verder is vastgelegd in spec 0004.
 
 De taalkeuze geldt niet voor:
 

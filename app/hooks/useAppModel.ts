@@ -4,6 +4,7 @@ import {
   SCENARIO_TEMPLATES,
   createPracticeInstanceForTemplate,
   createScenarioInstance,
+  unlockedLevelFor,
 } from "../domain/scenarios";
 import { parseExerciseDraft } from "../domain/exercises";
 import type {
@@ -139,15 +140,16 @@ export function useAppModel() {
       const completedAt = new Date().toISOString();
       const completedInstance = { ...instance, completedAt };
       const successCount = snapshot.progress.successfulScenarios + 1;
-      const unlockedLevel = Math.min(4, 1 + Math.floor(successCount / 3)) as 1 | 2 | 3 | 4;
+      const completedTemplateIds = Array.from(
+        new Set([...snapshot.progress.completedTemplateIds, template.id]),
+      );
+      const unlockedLevel = unlockedLevelFor(completedTemplateIds, snapshot.profile!.sectorId);
       const changesCompany = instance.mode !== "practice";
       const progress = {
         ...snapshot.progress,
         successfulScenarios: successCount,
         unlockedLevel,
-        completedTemplateIds: Array.from(
-          new Set([...snapshot.progress.completedTemplateIds, template.id]),
-        ),
+        completedTemplateIds,
         masteredConcepts: Array.from(new Set([...snapshot.progress.masteredConcepts, template.concept])),
         growthDays: snapshot.progress.growthDays + (changesCompany ? 1 : 0),
         reputation: Math.min(100, snapshot.progress.reputation + (changesCompany ? 2 : 0)),

@@ -8,6 +8,7 @@ import {
   localizeScenarioInstance,
   scenarioTemplateTitle,
   standardPracticeTemplates,
+  unlockedLevelFor,
   validateScenarioTemplates,
 } from "./scenarios";
 
@@ -53,6 +54,18 @@ describe("scenario-engine", () => {
     expect(scenario.mode).toBe("practice");
     expect(() => createPracticeInstanceForTemplate(profile, "shop-sale-vat", "2026-10-19", "wrong-sector"))
       .toThrow(/niet beschikbaar/);
+  });
+
+  it("ontgrendelt niveaus na alle unieke standaardoefeningen van het vorige niveau", () => {
+    const level2 = SCENARIO_TEMPLATES.filter((template) => template.level === 2).map((template) => template.id);
+    const level3 = SCENARIO_TEMPLATES.filter((template) => template.level === 3).map((template) => template.id);
+
+    expect(unlockedLevelFor(["start-capital"], profile.sectorId)).toBe(1);
+    expect(unlockedLevelFor(["buy-equipment"], profile.sectorId)).toBe(2);
+    expect(unlockedLevelFor(["buy-equipment", "buy-equipment", ...level2.slice(0, -1)], profile.sectorId)).toBe(2);
+    expect(unlockedLevelFor(["buy-equipment", ...level2], profile.sectorId)).toBe(3);
+    expect(unlockedLevelFor(["buy-equipment", ...level2, ...level3.slice(0, -1)], profile.sectorId)).toBe(3);
+    expect(unlockedLevelFor(["buy-equipment", ...level2, ...level3], profile.sectorId)).toBe(4);
   });
 
   it("heeft Engelse inhoud voor iedere standaardoefening en lokaliseert bestaande scenario's", () => {

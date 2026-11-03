@@ -9,6 +9,7 @@ import {
 import { useEffect } from "react";
 
 import type { Route } from "./+types/root";
+import { APP_VERSION } from "./version";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -38,6 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <small className="app-version" aria-label={`Versie / Version ${APP_VERSION}`}>v{APP_VERSION}</small>
         <ScrollRestoration />
         <Scripts />
       </body>

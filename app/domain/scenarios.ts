@@ -8,6 +8,7 @@ import type {
   ScenarioInstance,
   ScenarioMode,
   ScenarioTemplate,
+  SectorId,
 } from "./types";
 
 const line = (accountId: string, side: "debit" | "credit", amountCents: number) => ({
@@ -464,6 +465,20 @@ export function standardPracticeTemplates(profile: CompanyProfile) {
       template.id !== "start-capital" &&
       (!template.sectorIds || template.sectorIds.includes(profile.sectorId)),
   );
+}
+
+export function unlockedLevelFor(completedTemplateIds: string[], sectorId: SectorId): Progress["unlockedLevel"] {
+  const completed = new Set(completedTemplateIds);
+  const available = SCENARIO_TEMPLATES.filter(
+    (template) =>
+      template.id !== "start-capital" &&
+      (!template.sectorIds || template.sectorIds.includes(sectorId)),
+  );
+  for (const level of [1, 2, 3] as const) {
+    const required = available.filter((template) => template.level === level);
+    if (!required.length || required.some((template) => !completed.has(template.id))) return level;
+  }
+  return 4;
 }
 
 export function createPracticeInstanceForTemplate(

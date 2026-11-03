@@ -109,6 +109,41 @@ test("na wissen kan in dezelfde sessie een nieuw fotografiebedrijf worden aangem
   expect(pageErrors).toEqual([]);
 });
 
+test("Een goede werkplek ontgrendelt niveau 2 en toont de appversie", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByLabel("Versie / Version 0.1.0")).toBeVisible();
+  await chooseDutch(page);
+  await page.getByLabel("Bedrijfsnaam").fill("Oefenbedrijf");
+  await page.getByRole("button", { name: /Kies mijn sector/ }).click();
+  await page.getByRole("button", { name: /Kies mijn aanbod/ }).click();
+  await page.getByRole("button", { name: /Open mijn bedrijf/ }).click();
+
+  await page.locator("select").nth(0).selectOption("bank");
+  await page.locator("select").nth(2).selectOption("capital");
+  await page.locator('input[inputmode="decimal"]').nth(0).fill("5000");
+  await page.locator('input[inputmode="decimal"]').nth(1).fill("5000");
+  await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+  await page.getByRole("button", { name: "Bekijk mijn bedrijf" }).click();
+
+  await page.getByRole("button", { name: "Oefenen" }).click();
+  const level2Exercise = page.getByRole("heading", { name: "Kleine benodigdheden" }).locator("..").locator("..");
+  await expect(level2Exercise.getByRole("button", { name: "Niveau 2" })).toBeDisabled();
+  await page.getByRole("heading", { name: "Een goede werkplek" }).locator("..").locator("..").getByRole("button", { name: "Start" }).click();
+
+  const story = await page.getByText(/Je koopt zonder btw-oefening inventaris/).innerText();
+  const amount = story.match(/€\s*([\d.]+,\d{2})/)?.[1];
+  expect(amount).toBeTruthy();
+  await page.locator("select").nth(0).selectOption("equipment");
+  await page.locator("select").nth(2).selectOption("bank");
+  await page.locator('input[inputmode="decimal"]').nth(0).fill(amount!);
+  await page.locator('input[inputmode="decimal"]').nth(1).fill(amount!);
+  await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+  await page.getByRole("button", { name: "Verder oefenen" }).click();
+
+  await expect(level2Exercise.getByRole("button", { name: "Start" })).toBeEnabled();
+  await expect(page.getByText("Niveau 2", { exact: true }).first()).toBeVisible();
+});
+
 test("zelfgemaakte en geïmporteerde oefeningen blijven buiten de leerprogressie", async ({ page }) => {
   await page.goto("/");
   await chooseDutch(page);

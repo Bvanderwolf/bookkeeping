@@ -47,6 +47,25 @@ describe("IndexedDB-repository", () => {
     expect(result.progress).toEqual(freshProgress());
   });
 
+  it("leidt het ontgrendelde niveau bij laden af uit afgeronde oefeningen", async () => {
+    const repository = createRepository(`exercise-progress-${crypto.randomUUID()}`);
+    await repository.saveProfile({
+      id: "company",
+      name: "Testzaak",
+      sectorId: "creative",
+      offeringId: "webdesign",
+      createdAt: "2026-10-20T10:00:00.000Z",
+    });
+    await repository.saveProgress({
+      ...freshProgress(),
+      successfulScenarios: 9,
+      unlockedLevel: 4,
+      completedTemplateIds: ["start-capital", "buy-equipment"],
+    });
+
+    expect((await repository.load()).progress.unlockedLevel).toBe(2);
+  });
+
   it("bewaart de taalkeuze ook wanneer het bedrijf wordt gewist", async () => {
     const repository = createRepository(`language-${crypto.randomUUID()}`);
     expect((await repository.load()).language).toBeUndefined();

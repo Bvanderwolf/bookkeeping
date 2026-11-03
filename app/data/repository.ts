@@ -13,6 +13,7 @@ import type {
   StoredExercise,
 } from "../domain/types";
 import { exerciseDefinitionSchema, parseExerciseExport, toExerciseExport } from "../domain/exercises";
+import { unlockedLevelFor } from "../domain/scenarios";
 
 interface SettingRecord {
   key: "profile" | "progress" | "language";
@@ -83,10 +84,14 @@ export function createRepository(databaseName = "mijn-bedrijf-app"): AppReposito
       db.instances.toArray(),
       db.attempts.toArray(),
     ]);
+    const profile = (profileRecord?.value as CompanyProfile | undefined) ?? null;
+    const storedProgress = (progressRecord?.value as Progress | undefined) ?? freshProgress();
     return {
       language: languageRecord?.value === "en" || languageRecord?.value === "nl" ? languageRecord.value : undefined,
-      profile: (profileRecord?.value as CompanyProfile | undefined) ?? null,
-      progress: (progressRecord?.value as Progress | undefined) ?? freshProgress(),
+      profile,
+      progress: profile
+        ? { ...storedProgress, unlockedLevel: unlockedLevelFor(storedProgress.completedTemplateIds, profile.sectorId) }
+        : storedProgress,
       entries,
       instances,
       attempts,

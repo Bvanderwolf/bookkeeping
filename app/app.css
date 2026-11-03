@@ -71,6 +71,17 @@ a {
   white-space: pre-wrap;
 }
 
+.app-version {
+  position: fixed;
+  z-index: 11;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(2px, env(safe-area-inset-bottom));
+  color: #84918b;
+  font-size: 10px;
+  line-height: 1;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
