@@ -10,6 +10,7 @@ import { parseExerciseDraft } from "../domain/exercises";
 import type {
   AppSnapshot,
   AppLanguage,
+  BusinessEvent,
   CompanyProfile,
   ExerciseDraft,
   JournalEntry,
@@ -20,6 +21,9 @@ import type {
 } from "../domain/types";
 import { createRepository, freshProgress } from "../data/repository";
 
+const developerPracticeKey = "mijn-bedrijf:unlimited-scenarios";
+const developerEventsKey = "mijn-bedrijf:unlimited-events";
+
 const emptySnapshot = (language?: AppLanguage): AppSnapshot => ({
   language,
   profile: null,
@@ -27,6 +31,7 @@ const emptySnapshot = (language?: AppLanguage): AppSnapshot => ({
   entries: [],
   instances: [],
   attempts: [],
+  events: [],
 });
 
 export function useAppModel() {
@@ -34,8 +39,27 @@ export function useAppModel() {
   const [snapshot, setSnapshot] = useState<AppSnapshot>(emptySnapshot);
   const [exercises, setExercises] = useState<StoredExercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unlimitedScenarios, setUnlimitedScenarios] = useState(
+    () => typeof window !== "undefined" && window.localStorage.getItem(developerPracticeKey) === "true",
+  );
+  const [unlimitedEvents, setUnlimitedEvents] = useState(
+    () => typeof window !== "undefined" && window.localStorage.getItem(developerEventsKey) === "true",
+  );
+
+  const setUnlimitedScenariosEnabled = useCallback((enabled: boolean) => {
+    if (enabled) window.localStorage.setItem(developerPracticeKey, "true");
+    else window.localStorage.removeItem(developerPracticeKey);
+    setUnlimitedScenarios(enabled);
+  }, []);
+
+  const setUnlimitedEventsEnabled = useCallback((enabled: boolean) => {
+    if (enabled) window.localStorage.setItem(developerEventsKey, "true");
+    else window.localStorage.removeItem(developerEventsKey);
+    setUnlimitedEvents(enabled);
+  }, []);
 
   const reload = useCallback(async () => {
+    await repository.ensureDueEvent();
     const [nextSnapshot, nextExercises] = await Promise.all([
       repository.load(),
       repository.loadExercises(),
@@ -81,19 +105,21 @@ export function useAppModel() {
         const existing = snapshot.instances.find((instance) => instance.mode === "tutorial");
         if (existing) return existing;
       }
-      if (mode === "daily") {
+      if (mode === "daily" && !unlimitedScenarios) {
         const existing = snapshot.instances.find(
-          (instance) => instance.mode === "daily" && instance.assignedDate === date,
+          (instance) => instance.id === `daily-${date}`,
         );
         if (existing) return existing;
       }
-      const nonce = mode === "practice" ? `${Date.now()}:${snapshot.instances.length}` : "";
+      const nonce = mode === "daily" && unlimitedScenarios
+        ? crypto.randomUUID()
+        : mode === "practice" ? `${Date.now()}:${snapshot.instances.length}` : "";
       const instance = createScenarioInstance(snapshot.profile, snapshot.progress, mode, date, nonce, snapshot.language ?? "nl");
       await repository.saveInstance(instance);
       setSnapshot((current) => ({ ...current, instances: [...current.instances, instance] }));
       return instance;
     },
-    [repository, snapshot],
+    [repository, snapshot, unlimitedScenarios],
   );
 
   const recordAttempt = useCallback(
@@ -115,7 +141,7 @@ export function useAppModel() {
     async (templateId: string) => {
       if (!snapshot.profile) throw new Error("Maak eerst een bedrijf aan.");
       const template = SCENARIO_TEMPLATES.find((item) => item.id === templateId);
-      if (!template || template.level > snapshot.progress.unlockedLevel) {
+      if (!template || (!unlimitedScenarios && template.level > snapshot.progress.unlockedLevel)) {
         throw new Error("Deze oefening is nog niet beschikbaar.");
       }
       const instance = createPracticeInstanceForTemplate(
@@ -129,7 +155,7 @@ export function useAppModel() {
       setSnapshot((current) => ({ ...current, instances: [...current.instances, instance] }));
       return instance;
     },
-    [repository, snapshot],
+    [repository, snapshot, unlimitedScenarios],
   );
 
   const completeScenario = useCallback(
@@ -183,14 +209,38 @@ export function useAppModel() {
           item.id === instance.id ? completedInstance : item,
         ),
       }));
+      if (changesCompany) {
+        await repository.ensureDueEvent();
+        const currentEvents = (await repository.load()).events;
+        setSnapshot((current) => ({ ...current, events: currentEvents }));
+      }
     },
     [repository, snapshot.progress],
   );
 
+  const answerEventQuestion = useCallback(async (event: BusinessEvent, answerNumber: number) => {
+    await repository.answerEventQuestion(event.id, answerNumber);
+    await reload();
+  }, [reload, repository]);
+
+  const completeEvent = useCallback(async (event: BusinessEvent) => {
+    await repository.completeEvent(event.id);
+    await reload();
+  }, [reload, repository]);
+
+  const startExtraEvent = useCallback(async () => {
+    if (!unlimitedEvents) throw new Error("Onbeperkt events oefenen staat uit.");
+    const event = await repository.createExtraEvent();
+    setSnapshot((current) => ({ ...current, events: [...(current.events ?? []), event] }));
+    return event;
+  }, [repository, unlimitedEvents]);
+
   const reset = useCallback(async () => {
     await repository.reset();
+    setUnlimitedScenariosEnabled(false);
+    setUnlimitedEventsEnabled(false);
     setSnapshot((current) => emptySnapshot(current.language));
-  }, [repository]);
+  }, [repository, setUnlimitedEventsEnabled, setUnlimitedScenariosEnabled]);
 
   const createExercise = useCallback(
     async (draft: ExerciseDraft) => {
@@ -228,12 +278,19 @@ export function useAppModel() {
     loading,
     snapshot,
     exercises,
+    unlimitedScenarios,
+    unlimitedEvents,
+    setUnlimitedScenariosEnabled,
+    setUnlimitedEventsEnabled,
     setLanguage,
     createCompany,
     getOrCreateScenario,
     startStandardPractice,
     recordAttempt,
     completeScenario,
+    answerEventQuestion,
+    completeEvent,
+    startExtraEvent,
     reset,
     createExercise,
     exportExercises,

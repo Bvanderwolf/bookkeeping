@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { APP_VERSION } from "../app/version";
 
 async function fillShownSolution(page: Page) {
   const solution = page.locator("details");
@@ -28,6 +29,16 @@ async function fillShownSolution(page: Page) {
 
 async function chooseDutch(page: Page) {
   await page.getByRole("button", { name: /Nederlands/ }).click();
+}
+
+async function completeAccountantEvent(page: Page) {
+  await expect(page.getByText("Vraag 1 van 3")).toBeVisible();
+  await page.getByRole("button", { name: "Debet" }).click();
+  await expect(page.getByText("Vraag 2 van 3")).toBeVisible();
+  await page.getByRole("button", { name: "Debet" }).click();
+  await expect(page.getByText("Vraag 3 van 3")).toBeVisible();
+  await page.getByRole("button", { name: "Credit" }).click();
+  await expect(page.getByRole("heading", { name: "Alle vragen beantwoord!" })).toBeVisible();
 }
 
 test("onboarding, dagelijkse feedback en balans werken op mobiel", async ({ page }) => {
@@ -82,6 +93,175 @@ test("onboarding, dagelijkse feedback en balans werken op mobiel", async ({ page
   expect(await page.locator("html").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
 
+test("na zes actieve speeldagen verschijnt een blijvend event naast het dagscenario", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.clock.setFixedTime(new Date("2026-10-20T10:00:00+02:00"));
+  await page.goto("/");
+  await chooseDutch(page);
+  await page.getByLabel("Bedrijfsnaam").fill("Eventzaak");
+  await page.getByRole("button", { name: /Kies mijn sector/ }).click();
+  await page.getByRole("button", { name: /Kies mijn aanbod/ }).click();
+  await page.getByRole("button", { name: /Open mijn bedrijf/ }).click();
+  await page.locator("select").nth(0).selectOption("bank");
+  await page.locator("select").nth(2).selectOption("capital");
+  await page.locator('input[inputmode="decimal"]').nth(0).fill("5000");
+  await page.locator('input[inputmode="decimal"]').nth(1).fill("5000");
+  await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+  await page.getByRole("button", { name: "Bekijk mijn bedrijf" }).click();
+  await expect(page.getByRole("button", { name: "Open event" })).toHaveCount(0);
+
+  for (let day = 21; day <= 25; day += 1) {
+    await page.clock.setFixedTime(new Date(`2026-10-${day}T10:00:00+02:00`));
+    await page.getByRole("button", { name: "Overzicht" }).click();
+    await page.getByRole("button", { name: "Bedrijf" }).click();
+    await page.getByRole("button", { name: "Open scenario" }).click();
+    for (let attempt = 0; attempt < 3; attempt += 1) await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+    await fillShownSolution(page);
+    await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+    await page.getByRole("button", { name: "Terug naar Bedrijf" }).click();
+    await expect(page.getByRole("button", { name: "Open event" })).toHaveCount(day === 25 ? 1 : 0);
+  }
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Open event" })).toBeVisible();
+  await page.getByRole("button", { name: "Open event" }).click();
+  await expect(page.getByRole("heading", { name: /De accountant komt langs|De maandafsluiting komt eraan|Factuur zonder bestelling/ })).toBeVisible();
+  if (await page.getByRole("heading", { name: "De accountant komt langs" }).count()) {
+    await completeAccountantEvent(page);
+  } else {
+    for (let attempt = 0; attempt < 3; attempt += 1) await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+    await fillShownSolution(page);
+    await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+    await expect(page.getByRole("heading", { name: "De cijfers kloppen!" })).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Terug naar Bedrijf" }).click();
+  await expect(page.getByRole("button", { name: "Open event" })).toHaveCount(0);
+  await expect(page.getByText("6 groeidagen")).toBeVisible();
+});
+
+test("ontwikkelaarsoptie laat events achter elkaar oefenen", async ({ page }) => {
+  await page.goto("/");
+  await chooseDutch(page);
+  await page.getByLabel("Bedrijfsnaam").fill("Eventtest");
+  await page.getByRole("button", { name: /Kies mijn sector/ }).click();
+  await page.getByRole("button", { name: /Kies mijn aanbod/ }).click();
+  await page.getByRole("button", { name: /Open mijn bedrijf/ }).click();
+  await page.getByRole("button", { name: "Terug", exact: true }).click();
+  await page.getByRole("button", { name: "Profiel", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Onbeperkt events oefenen" }).check();
+  await page.getByRole("button", { name: "Bedrijf", exact: true }).click();
+  await page.getByRole("button", { name: "Nieuw event" }).click();
+  await expect(page.getByRole("heading", { name: /De accountant komt langs|De maandafsluiting komt eraan|Factuur zonder bestelling/ })).toBeVisible();
+  const firstTitle = await page.locator("h1").innerText();
+  const firstIsAccountant = await page.getByRole("heading", { name: "De accountant komt langs" }).count() > 0;
+  if (firstIsAccountant) {
+    await completeAccountantEvent(page);
+  } else {
+    for (let attempt = 0; attempt < 3; attempt += 1) await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+    await fillShownSolution(page);
+    await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+  }
+  await page.getByRole("button", { name: "Terug naar Bedrijf" }).click();
+  await expect(page.getByRole("button", { name: "Nieuw event" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Nieuw event" })).toBeVisible();
+  await page.getByRole("button", { name: "Nieuw event" }).click();
+  await expect(page.getByRole("heading", { name: /De accountant komt langs|De maandafsluiting komt eraan|Factuur zonder bestelling/ })).toBeVisible();
+  expect(await page.locator("h1").innerText()).not.toBe(firstTitle);
+  await page.getByRole("button", { name: "Terug", exact: true }).click();
+  await page.getByRole("button", { name: "Profiel", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Onbeperkt events oefenen" }).uncheck();
+  await page.getByRole("button", { name: "Bedrijf", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Open event" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nieuw event" })).toHaveCount(0);
+});
+
+test("factuur zonder bestelling wordt voorlopig op de tussenrekening geboekt", async ({ page }) => {
+  await page.goto("/");
+  await chooseDutch(page);
+  await page.getByLabel("Bedrijfsnaam").fill("Factuurtest");
+  await page.getByRole("button", { name: /Kies mijn sector/ }).click();
+  await page.getByRole("button", { name: /Kies mijn aanbod/ }).click();
+  await page.getByRole("button", { name: /Open mijn bedrijf/ }).click();
+  await page.getByRole("button", { name: "Terug", exact: true }).click();
+  await page.getByRole("button", { name: "Profiel", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Onbeperkt events oefenen" }).check();
+  await page.getByRole("button", { name: "Bedrijf", exact: true }).click();
+  await page.evaluate(() => { Math.random = () => 0.99; });
+  await page.getByRole("button", { name: "Nieuw event" }).click();
+  await expect(page.getByRole("heading", { name: "Factuur zonder bestelling" })).toBeVisible();
+  const story = page.getByText(/Er ligt een onbetaalde leveranciersfactuur/);
+  await expect(story).toBeVisible();
+  await expect(story).not.toContainText(/Tussenrekening|Crediteuren|debet|credit/i);
+  await page.locator("select").nth(0).selectOption("bank");
+  await page.locator("select").nth(2).selectOption("payables");
+  await page.locator('input[inputmode="decimal"]').nth(0).fill("450");
+  await page.locator('input[inputmode="decimal"]').nth(1).fill("450");
+  await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+  await expect(page.getByRole("alert")).toContainText(/Wat weet je al over de factuur/);
+  await expect(page.getByRole("alert")).not.toContainText(/Tussenrekening|Crediteuren|debet|credit/i);
+  await page.locator("select").nth(0).selectOption("suspense");
+  await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+  await expect(page.getByRole("heading", { name: "De cijfers kloppen!" })).toBeVisible();
+  await page.getByRole("button", { name: "Terug naar Bedrijf" }).click();
+  await expect(page.getByText("0 groeidagen")).toBeVisible();
+  await page.getByRole("button", { name: "Overzicht", exact: true }).click();
+  await expect(page.getByText("Tussenrekening")).toBeVisible();
+  await expect(page.getByText("€ 450,00", { exact: true }).first()).toBeVisible();
+});
+
+test("ontwikkelaarsoptie ontgrendelt oefeningen en laat herhaaldelijk bedrijfsscenario's starten", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-20T10:00:00+02:00"));
+  await page.goto("/");
+  await chooseDutch(page);
+  await page.getByLabel("Bedrijfsnaam").fill("Studio Oefen");
+  await page.getByRole("button", { name: /Kies mijn sector/ }).click();
+  await page.getByRole("button", { name: /Kies mijn aanbod/ }).click();
+  await page.getByRole("button", { name: /Open mijn bedrijf/ }).click();
+  await page.locator("select").nth(0).selectOption("bank");
+  await page.locator("select").nth(2).selectOption("capital");
+  await page.locator('input[inputmode="decimal"]').nth(0).fill("5000");
+  await page.locator('input[inputmode="decimal"]').nth(1).fill("5000");
+  await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+  await page.getByRole("button", { name: "Bekijk mijn bedrijf" }).click();
+
+  await page.clock.setFixedTime(new Date("2026-10-21T10:00:00+02:00"));
+
+  await page.getByRole("button", { name: "Profiel", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Onbeperkt scenario's oefenen" }).check();
+  await page.getByRole("button", { name: "Oefenen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Onbeperkt oefenen" })).toHaveCount(0);
+  const level3 = page.locator("details").filter({ has: page.getByText("Niveau 3", { exact: true }) });
+  await expect(level3).toHaveAttribute("open", "");
+  await level3.getByRole("button", { name: "Start" }).first().click();
+  await expect(page.getByRole("heading", { name: "Maak de boeking" })).toBeVisible();
+  await page.getByRole("button", { name: "Terug", exact: true }).click();
+  await page.getByRole("button", { name: "Bedrijf", exact: true }).click();
+  await expect(page.getByText("Scenario van vandaag")).toBeVisible();
+
+  for (let round = 0; round < 2; round += 1) {
+    await page.getByRole("button", { name: round === 0 ? "Open scenario" : "Nieuw scenario" }).click();
+    for (let index = 0; index < 3; index += 1) {
+      await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+    }
+    await fillShownSolution(page);
+    await page.getByRole("button", { name: /Controleer mijn boeking/ }).click();
+    await page.getByRole("button", { name: "Terug naar Bedrijf" }).click();
+    await expect(page.getByText("Klaar voor vandaag")).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Nieuw scenario" }).click();
+  await expect(page.getByRole("heading", { name: "Maak de boeking" })).toBeVisible();
+  await page.getByRole("button", { name: "Terug", exact: true }).click();
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Nieuw scenario" })).toBeVisible();
+  await page.getByRole("button", { name: "Profiel", exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "Onbeperkt scenario's oefenen" })).toBeChecked();
+  await page.getByRole("checkbox", { name: "Onbeperkt scenario's oefenen" }).uncheck();
+  await page.getByRole("button", { name: "Bedrijf", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Nieuw scenario" })).toHaveCount(0);
+});
+
 test("na wissen kan in dezelfde sessie een nieuw fotografiebedrijf worden aangemaakt", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -111,7 +291,7 @@ test("na wissen kan in dezelfde sessie een nieuw fotografiebedrijf worden aangem
 
 test("Een goede werkplek ontgrendelt niveau 1 en toont de appversie", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByLabel("Versie / Version 0.1.2")).toBeVisible();
+  await expect(page.getByLabel(`Versie / Version ${APP_VERSION}`)).toBeVisible();
   await chooseDutch(page);
   await page.getByLabel("Bedrijfsnaam").fill("Oefenbedrijf");
   await page.getByRole("button", { name: /Kies mijn sector/ }).click();

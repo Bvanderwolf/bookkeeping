@@ -61,7 +61,12 @@
 .dailyCard h2, .dailyDone h2 { margin: 4px 0; font-size: 18px; }
 .dailyCard p, .dailyDone p { margin: 0; color: #dce9ef; font-size: 13px; line-height: 1.4; }
 .dailyDone p { color: var(--ink-soft); }
-.dailyCard button { min-height: 44px; grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 8px; color: var(--ink); background: var(--gold); border: 0; border-radius: 12px; font-weight: 800; cursor: pointer; }
+.dailyCard button, .dailyDone button { min-height: 44px; grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 8px; color: var(--ink); background: var(--gold); border: 0; border-radius: 12px; font-weight: 800; cursor: pointer; }
+.eventCard { margin-top: 12px; padding: 18px; color: var(--ink); background: #fff0d5; border: 2px solid #e8bb6d; border-radius: 20px; box-shadow: 0 8px 24px rgb(23 50 77 / 8%); }
+.eventCard span { color: #80521b; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.eventCard h2 { margin: 5px 0; font-size: 19px; }
+.eventCard p { margin: 0 0 13px; color: var(--ink-soft); font-size: 13px; }
+.eventCard button { min-height: 44px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; background: var(--ink); border: 0; border-radius: 12px; font-weight: 800; cursor: pointer; }
 .growthCard { margin-top: 12px; padding: 16px; background: var(--paper); border: 1px solid rgb(23 50 77 / 9%); border-radius: 18px; }
 .growthCard > div:first-child { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
 .growthCard > div:first-child span { color: var(--ink-soft); }
@@ -142,6 +147,11 @@
 .languageOptions { padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #e9ece6; border-radius: 13px; }
 .languageOptions button { min-height: 42px; color: var(--ink-soft); background: transparent; border: 0; border-radius: 10px; font-weight: 800; cursor: pointer; }
 .languageOptions .languageActive { color: var(--ink); background: white; box-shadow: 0 3px 10px rgb(23 50 77 / 8%); }
+.developerOptionsCard { margin-top: 12px; padding: 16px 18px; display: grid; gap: 12px; background: var(--paper); border: 1px solid rgb(23 50 77 / 9%); border-radius: 20px; box-shadow: 0 8px 26px rgb(23 50 77 / 6%); }
+.developerOptionsCard h2 { margin: 0; font-size: 17px; }
+.developerOptionsCard p { margin: 3px 0 0; color: var(--ink-soft); font-size: 12px; }
+.developerToggle { min-height: 44px; display: flex; align-items: center; gap: 11px; font-size: 13px; font-weight: 800; cursor: pointer; }
+.developerToggle input { width: 20px; height: 20px; margin: 0; accent-color: var(--mint-dark); cursor: pointer; }
 .dataCard { margin-top: 12px; padding: 0 18px; }
 .dataCard summary { min-height: 60px; display: flex; justify-content: space-between; align-items: center; gap: 12px; list-style: none; cursor: pointer; }
 .dataCard summary::-webkit-details-marker { display: none; }

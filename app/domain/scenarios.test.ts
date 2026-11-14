@@ -56,6 +56,17 @@ describe("scenario-engine", () => {
       .toThrow(/niet beschikbaar/);
   });
 
+  it("geeft extra dagscenario's op dezelfde datum unieke ID's zonder het normale dag-ID te wijzigen", () => {
+    const progress = freshProgress();
+    const first = createScenarioInstance(profile, progress, "daily", "2026-10-19");
+    const second = createScenarioInstance(profile, progress, "daily", "2026-10-19", crypto.randomUUID());
+    const third = createScenarioInstance(profile, progress, "daily", "2026-10-19", crypto.randomUUID());
+    expect(first.id).toBe("daily-2026-10-19");
+    expect(new Set([first.id, second.id, third.id]).size).toBe(3);
+    expect(second.mode).toBe("daily");
+    expect(third.assignedDate).toBe(first.assignedDate);
+  });
+
   it("ontgrendelt niveaus na alle unieke standaardoefeningen van het vorige niveau", () => {
     const level1 = SCENARIO_TEMPLATES.filter((template) => template.level === 1).map((template) => template.id);
     const level2 = SCENARIO_TEMPLATES.filter((template) => template.level === 2).map((template) => template.id);

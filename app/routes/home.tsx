@@ -8,10 +8,12 @@ import {
 import type { Route } from "./+types/home";
 import { ACCOUNTS, accountName, formatMoney, localDateKey, sectorsForLanguage } from "../domain/accounts";
 import { calculateFinancials } from "../domain/accounting";
+import { eventBooking, invoiceWithoutOrderBooking } from "../domain/events";
 import { localizeScenarioInstance, scenarioConcept, scenarioTemplateTitle, standardPracticeTemplates } from "../domain/scenarios";
 import type {
   AppSnapshot,
   AppLanguage,
+  BusinessEvent,
   ExerciseExportV1,
   ExerciseImportResult,
   ScenarioInstance,
@@ -22,6 +24,7 @@ import { useAppModel } from "../hooks/useAppModel";
 import { BusinessScene } from "../components/BusinessScene";
 import { BookingChallenge, type BookingChallengePresentation } from "../components/BookingChallenge";
 import { ExerciseEditor } from "../components/ExerciseEditor";
+import { AccountantEvent } from "../components/AccountantEvent";
 import styles from "./home.module.css";
 import { LanguageProvider, translate, useI18n } from "../i18n";
 
@@ -41,6 +44,7 @@ export function meta({}: Route.MetaArgs) {
 
 type MainView = "company" | "practice" | "overview" | "profile";
 type ActiveScreen =
+  | { type: "event"; id: string }
   | { type: "challenge"; scenario: ScenarioInstance; tracked: true }
   | {
       type: "challenge";
@@ -87,6 +91,14 @@ function HomeContent({ app }: { app: ReturnType<typeof useAppModel> }) {
 
   if (app.loading) return <LoadingScreen />;
   if (!app.snapshot.language) return <LanguageSetup onSelect={app.setLanguage} />;
+  if (activeScreen?.type === "event") {
+    const event = app.snapshot.events?.find((item) => item.id === activeScreen.id);
+    if (event) {
+      if (event.type === "accountant") return <AccountantEvent event={event} onBack={() => setActiveScreen(null)} onAnswer={(number) => app.answerEventQuestion(event, number)} onComplete={() => app.completeEvent(event)} />;
+      const scenario = bookingEventScenario(event, language);
+      return <BookingChallenge key={event.id} scenario={scenario} presentation={{ headerLabel: t("Bijzonder event"), metaLabel: t(eventTitle(event)), kicker: t(eventTitle(event)) }} onBack={() => setActiveScreen(null)} onSuccessContinue={() => { setView("company"); setActiveScreen(null); }} onAttempt={async () => undefined} onComplete={() => app.completeEvent(event)} />;
+    }
+  }
   if (activeScreen?.type === "exercise-editor") {
     return (
       <ExerciseEditor
@@ -109,6 +121,7 @@ function HomeContent({ app }: { app: ReturnType<typeof useAppModel> }) {
       : activeScreen.scenario;
     return (
       <BookingChallenge
+        key={scenario.id}
         scenario={scenario}
         presentation={activeScreen.tracked ? undefined : activeScreen.presentation}
         onBack={() => setActiveScreen(null)}
@@ -131,7 +144,10 @@ function HomeContent({ app }: { app: ReturnType<typeof useAppModel> }) {
 
   return (
     <AppShell view={view} setView={setView}>
-      {view === "company" && <CompanyView snapshot={app.snapshot} onOpenScenario={async () => {
+      {view === "company" && <CompanyView snapshot={app.snapshot} unlimitedScenarios={app.unlimitedScenarios} unlimitedEvents={app.unlimitedEvents} onOpenEvent={(id) => setActiveScreen({ type: "event", id })} onStartExtraEvent={async () => {
+        const event = await app.startExtraEvent();
+        setActiveScreen({ type: "event", id: event.id });
+      }} onOpenScenario={async () => {
         const tutorial = app.snapshot.instances.find((instance) => instance.mode === "tutorial" && !instance.completedAt);
         setActiveScreen({ type: "challenge", scenario: tutorial ?? (await app.getOrCreateScenario("daily")), tracked: true });
       }} />}
@@ -139,6 +155,7 @@ function HomeContent({ app }: { app: ReturnType<typeof useAppModel> }) {
         <PracticeView
           snapshot={app.snapshot}
           exercises={app.exercises}
+          unlimitedScenarios={app.unlimitedScenarios}
           onStartStandard={async (templateId) => {
             setActiveScreen({
               type: "challenge",
@@ -180,6 +197,10 @@ function HomeContent({ app }: { app: ReturnType<typeof useAppModel> }) {
           onExerciseImport={app.importExercises}
           onOpenEditor={() => setActiveScreen({ type: "exercise-editor" })}
           onLanguageChange={app.setLanguage}
+          unlimitedScenarios={app.unlimitedScenarios}
+          onUnlimitedScenariosChange={app.setUnlimitedScenariosEnabled}
+          unlimitedEvents={app.unlimitedEvents}
+          onUnlimitedEventsChange={app.setUnlimitedEventsEnabled}
         />
       )}
     </AppShell>
@@ -273,12 +294,52 @@ function AppShell({ view, setView, children }: { view: MainView; setView: (view:
   return <div className={styles.appShell}><main className={styles.mainContent}>{children}</main><nav className={styles.bottomNav} aria-label={t("Hoofdnavigatie")}>{nav.map((item) => <button key={item.id} className={view === item.id ? styles.navActive : ""} onClick={() => setView(item.id)}><item.icon size={21} /><span>{item.label}</span></button>)}</nav></div>;
 }
 
-function CompanyView({ snapshot, onOpenScenario }: { snapshot: AppSnapshot; onOpenScenario: () => Promise<void> }) {
+function eventTitle(event: BusinessEvent) {
+  return event.type === "month-close" ? "De maandafsluiting komt eraan"
+    : event.type === "accountant" ? "De accountant komt langs"
+      : "Factuur zonder bestelling";
+}
+
+function eventDescription(event: BusinessEvent) {
+  return event.type === "month-close" ? "Een gemaakte kostenpost wacht nog op de factuur."
+    : event.type === "accountant" ? "Beantwoord drie vragen over je boekhouding."
+      : "Er is een factuur binnengekomen zonder herkenbare bestelling.";
+}
+
+function bookingEventScenario(event: BusinessEvent, language: AppLanguage): ScenarioInstance {
+  const amountCents = event.amountCents ?? 0;
+  const monthClose = event.type === "month-close";
+  return {
+    id: event.id,
+    templateId: `${event.type}-event`,
+    mode: "daily",
+    assignedDate: localDateKey(),
+    seed: 0,
+    amountCents,
+    title: translate(language, eventTitle(event)),
+    story: translate(language, monthClose
+      ? "Je hebt een dienst van {{amount}} ontvangen, maar de leveranciersfactuur ontbreekt nog. Boek de gemaakte kosten en de schuld voor de maandafsluiting."
+      : "Er ligt een onbetaalde leveranciersfactuur van {{amount}}. Niemand kan de bijbehorende bestelling vinden of aangeven voor welke activiteit de factuur was. Verwerk de factuur voorlopig in je boekhouding.", { amount: formatMoney(amountCents, false, language) }),
+    solution: monthClose ? eventBooking(amountCents) : invoiceWithoutOrderBooking(amountCents),
+    hint: translate(language, monthClose
+      ? "De kosten zijn al gemaakt. De factuur komt later, dus boek een nog te ontvangen factuur als schuld."
+      : "Wat weet je al over de factuur, en wat is nog onzeker? Houd de onbekende bestemming apart van de openstaande schuld."),
+    explanation: translate(language, monthClose
+      ? "Algemene kosten nemen toe aan debet. De nog te ontvangen factuur is een schuld aan credit."
+      : "Tussenrekening neemt toe aan debet. De schuld aan de leverancier neemt toe aan credit. Het resultaat verandert nog niet."),
+    sceneEffect: translate(language, monthClose
+      ? "De maandafsluiting is bijgewerkt. De factuur volgt later."
+      : "De factuur staat veilig op de tussenrekening totdat duidelijk is waar de kosten horen."),
+  };
+}
+
+function CompanyView({ snapshot, unlimitedScenarios, unlimitedEvents, onOpenScenario, onOpenEvent, onStartExtraEvent }: { snapshot: AppSnapshot; unlimitedScenarios: boolean; unlimitedEvents: boolean; onOpenScenario: () => Promise<void>; onOpenEvent: (id: string) => void; onStartExtraEvent: () => Promise<void> }) {
   const { language, t } = useI18n();
   const profile = snapshot.profile!;
   const financials = calculateFinancials(snapshot.entries);
   const todayComplete = snapshot.progress.lastDailyDate === localDateKey();
   const tutorialOpen = snapshot.instances.some((item) => item.mode === "tutorial" && !item.completedAt);
+  const openEvent = snapshot.events?.find((item) => !item.completedAt);
   const latestCompleted = [...snapshot.instances]
     .reverse()
     .find((item) => item.completedAt && item.mode !== "practice");
@@ -287,7 +348,9 @@ function CompanyView({ snapshot, onOpenScenario }: { snapshot: AppSnapshot; onOp
       <header className={styles.pageHeader}><div><span className={styles.eyebrow}>{t("Goedemorgen")}</span><h1>{profile.name}</h1></div><div className={styles.avatar}>{profile.name.slice(0, 1).toUpperCase()}</div></header>
       <BusinessScene profile={profile} growthDays={snapshot.progress.growthDays} message={latestCompleted ? localizeScenarioInstance(latestCompleted, profile, language).sceneEffect : undefined} />
       <section className={styles.metrics} aria-label={t("Kerncijfers")}><div><span><WalletCards size={18} /> {t("Bank")}</span><strong>{formatMoney(financials.bank, false, language)}</strong></div><div><span><TrendingUp size={18} /> {t("Resultaat")}</span><strong className={financials.result < 0 ? styles.negative : ""}>{formatMoney(financials.result, true, language)}</strong></div><div><span><Star size={18} /> {t("Reputatie")}</span><strong>{snapshot.progress.reputation}<small>/100</small></strong></div></section>
-      <section className={todayComplete && !tutorialOpen ? styles.dailyDone : styles.dailyCard}><div className={styles.dailyIcon}>{todayComplete && !tutorialOpen ? <CheckCircle2 size={26} /> : <CalendarDays size={26} />}</div><div><span>{tutorialOpen ? t("Je eerste boeking") : todayComplete ? t("Klaar voor vandaag") : t("Scenario van vandaag")}</span><h2>{tutorialOpen ? t("Stort je startkapitaal") : todayComplete ? t("Je bedrijf groeit rustig verder") : t("Er is iets gebeurd in je zaak")}</h2><p>{tutorialOpen ? t("Leer meteen hoe debet en credit samenwerken.") : todayComplete ? t("Oefen gerust verder in de zandbak.") : t("Los de boeking op en zie wat er verandert.")}</p></div>{(!todayComplete || tutorialOpen) && <button onClick={onOpenScenario}>{t("Open scenario")} <ArrowRight size={19} /></button>}</section>
+      <section className={todayComplete && !tutorialOpen ? styles.dailyDone : styles.dailyCard}><div className={styles.dailyIcon}>{todayComplete && !tutorialOpen ? <CheckCircle2 size={26} /> : <CalendarDays size={26} />}</div><div><span>{tutorialOpen ? t("Je eerste boeking") : todayComplete ? t("Klaar voor vandaag") : t("Scenario van vandaag")}</span><h2>{tutorialOpen ? t("Stort je startkapitaal") : todayComplete ? t("Je bedrijf groeit rustig verder") : t("Er is iets gebeurd in je zaak")}</h2><p>{tutorialOpen ? t("Leer meteen hoe debet en credit samenwerken.") : todayComplete && unlimitedScenarios ? t("Start meteen nog een scenario voor je bedrijf.") : todayComplete ? t("Oefen gerust verder in de zandbak.") : t("Los de boeking op en zie wat er verandert.")}</p></div>{(!todayComplete || tutorialOpen || unlimitedScenarios) && <button onClick={onOpenScenario}>{t(todayComplete && !tutorialOpen ? "Nieuw scenario" : "Open scenario")} <ArrowRight size={19} /></button>}</section>
+      {openEvent && <section className={styles.eventCard}><span>{t("Bijzonder event")}</span><h2>{t(eventTitle(openEvent))}</h2><p>{t(eventDescription(openEvent))}</p><button onClick={() => onOpenEvent(openEvent.id)}>{t("Open event")} <ArrowRight size={19} /></button></section>}
+      {unlimitedEvents && !openEvent && <section className={styles.eventCard}><span>{t("Ontwikkelaarsoptie")}</span><h2>{t("Oefen een event")}</h2><p>{t("Start meteen een nieuw event voor je bedrijf.")}</p><button onClick={() => void onStartExtraEvent()}>{t("Nieuw event")} <ArrowRight size={19} /></button></section>}
       <section className={styles.growthCard}><div><span>{t("Groeipad")}</span><strong>{t("{{count}} groeidagen", { count: snapshot.progress.growthDays })}</strong></div><div className={styles.growthTrack}><span style={{ width: `${Math.min(100, snapshot.progress.growthDays / 8 * 100)}%` }} /></div><small>{t("Nog {{count}} dagen tot een volledig uitgegroeide zaak", { count: Math.max(0, 8 - snapshot.progress.growthDays) })}</small></section>
       <p className={styles.disclaimer}>{t("Educatieve simulatie · geen boekhoudkundig of fiscaal advies")}</p>
     </div>
@@ -297,12 +360,14 @@ function CompanyView({ snapshot, onOpenScenario }: { snapshot: AppSnapshot; onOp
 export function PracticeView({
   snapshot,
   exercises,
+  unlimitedScenarios = false,
   onStartStandard,
   onStartExercise,
   onManageExercises,
 }: {
   snapshot: AppSnapshot;
   exercises: StoredExercise[];
+  unlimitedScenarios?: boolean;
   onStartStandard: (templateId: string) => Promise<void>;
   onStartExercise: (exercise: StoredExercise) => void;
   onManageExercises: () => void;
@@ -337,15 +402,15 @@ export function PracticeView({
       <ExerciseSection title={t("Standaard")} description={t("Oefeningen die met Mijn Bedrijf worden meegeleverd.")}>
         <div className={styles.levelList}>
           {[...new Set(standard.map((template) => template.level))].sort((a, b) => a - b).map((practiceLevel) => (
-            <details className={styles.levelPanel} key={practiceLevel} open={practiceLevel === level}>
+            <details className={styles.levelPanel} key={practiceLevel} open={unlimitedScenarios || practiceLevel === level}>
               <summary>
                 <span>{t("Niveau {{level}}", { level: practiceLevel })}</span>
-                {practiceLevel > level && <Lock size={16} aria-hidden="true" />}
+                {!unlimitedScenarios && practiceLevel > level && <Lock size={16} aria-hidden="true" />}
                 <ChevronDown className={styles.levelChevron} size={20} aria-hidden="true" />
               </summary>
               <div className={styles.exerciseList}>
                 {standard.filter((template) => template.level === practiceLevel).map((template) => {
-                  const locked = template.level > level;
+                  const locked = !unlimitedScenarios && template.level > level;
                   const completed = completedTemplateIds.has(template.id);
                   const opened = openedTemplateIds.has(template.id);
                   const statusLabel = t(locked ? "Nog vergrendeld" : completed ? "Afgerond" : opened ? "Geopend, nog niet afgerond" : "Nog niet geopend");
@@ -469,6 +534,10 @@ export function ProfileView({
   onExerciseImport,
   onOpenEditor,
   onLanguageChange,
+  unlimitedScenarios = false,
+  onUnlimitedScenariosChange,
+  unlimitedEvents = false,
+  onUnlimitedEventsChange,
 }: {
   snapshot: AppSnapshot;
   exercises: StoredExercise[];
@@ -481,6 +550,10 @@ export function ProfileView({
   onExerciseImport: (data: unknown) => Promise<ExerciseImportResult>;
   onOpenEditor: () => void;
   onLanguageChange?: (language: AppLanguage) => Promise<void>;
+  unlimitedScenarios?: boolean;
+  onUnlimitedScenariosChange?: (enabled: boolean) => void;
+  unlimitedEvents?: boolean;
+  onUnlimitedEventsChange?: (enabled: boolean) => void;
 }) {
   const { language, t } = useI18n();
   const backupInputRef = useRef<HTMLInputElement>(null);
@@ -537,6 +610,29 @@ export function ProfileView({
           <button className={language === "nl" ? styles.languageActive : ""} onClick={() => onLanguageChange?.("nl")}>Nederlands</button>
           <button className={language === "en" ? styles.languageActive : ""} onClick={() => onLanguageChange?.("en")}>English</button>
         </div>
+      </section>
+
+      <section className={styles.developerOptionsCard} aria-labelledby="developer-options-title">
+        <div>
+          <h2 id="developer-options-title">{t("Ontwikkelaarsopties")}</h2>
+          <p>{t("Extra mogelijkheden om scenario's te testen.")}</p>
+        </div>
+        <label className={styles.developerToggle}>
+          <input
+            type="checkbox"
+            checked={unlimitedScenarios}
+            onChange={(event) => onUnlimitedScenariosChange?.(event.target.checked)}
+          />
+          <span>{t("Onbeperkt scenario's oefenen")}</span>
+        </label>
+        <label className={styles.developerToggle}>
+          <input
+            type="checkbox"
+            checked={unlimitedEvents}
+            onChange={(event) => onUnlimitedEventsChange?.(event.target.checked)}
+          />
+          <span>{t("Onbeperkt events oefenen")}</span>
+        </label>
       </section>
 
       <details

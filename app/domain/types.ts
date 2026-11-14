@@ -110,6 +110,18 @@ export interface Attempt {
   attemptNumber: number;
 }
 
+export type BusinessEventType = "month-close" | "accountant" | "invoice-without-order";
+
+export interface BusinessEvent {
+  id: string;
+  type: BusinessEventType;
+  triggeredAt: string;
+  amountCents?: number;
+  answeredQuestions: number;
+  completedAt?: string;
+  completedDate?: string;
+}
+
 export interface Progress {
   id: "progress";
   unlockedLevel: 0 | 1 | 2 | 3;
@@ -128,6 +140,7 @@ export interface AppSnapshot {
   entries: JournalEntry[];
   instances: ScenarioInstance[];
   attempts: Attempt[];
+  events?: BusinessEvent[];
 }
 
 export interface FinancialSnapshot {

@@ -448,7 +448,7 @@ export function createScenarioInstance(
   const localized = localizedScenarioFields(template, amountCents, profile, language);
 
   return {
-    id: mode === "daily" ? `daily-${dateKey}` : `${mode}-${dateKey}-${seed}`,
+    id: mode === "daily" ? `daily-${dateKey}${nonce ? `-${nonce}` : ""}` : `${mode}-${dateKey}-${seed}`,
     templateId: template.id,
     mode,
     assignedDate: dateKey,

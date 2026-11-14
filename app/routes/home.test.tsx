@@ -39,6 +39,44 @@ const selfMadeExercise: StoredExercise = {
 };
 
 describe("profielbeheer", () => {
+  it("biedt een toegankelijke schakelaar voor onbeperkt oefenen", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const props = {
+      snapshot, exercises: [], exerciseReturn: null, onExerciseReturnConsumed: vi.fn(),
+      onExport: vi.fn(), onImport: vi.fn(), onReset: vi.fn(), onExerciseExport: vi.fn(),
+      onExerciseImport: vi.fn(), onOpenEditor: vi.fn(), onUnlimitedScenariosChange: onChange,
+    };
+    const { rerender } = render(<ProfileView {...props} />);
+    const toggle = screen.getByRole("checkbox", { name: "Onbeperkt scenario's oefenen" });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+    expect(onChange).toHaveBeenCalledWith(true);
+    rerender(<ProfileView {...props} unlimitedScenarios />);
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(onChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("biedt een aparte schakelaar voor onbeperkt events oefenen", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const props = {
+      snapshot, exercises: [], exerciseReturn: null, onExerciseReturnConsumed: vi.fn(),
+      onExport: vi.fn(), onImport: vi.fn(), onReset: vi.fn(), onExerciseExport: vi.fn(),
+      onExerciseImport: vi.fn(), onOpenEditor: vi.fn(), onUnlimitedEventsChange: onChange,
+    };
+    const { rerender } = render(<ProfileView {...props} />);
+    const toggle = screen.getByRole("checkbox", { name: "Onbeperkt events oefenen" });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+    expect(onChange).toHaveBeenCalledWith(true);
+    rerender(<ProfileView {...props} unlimitedEvents />);
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(onChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("toont twee onafhankelijke gesloten panelen en houdt wissen afzonderlijk", async () => {
     const user = userEvent.setup();
     render(
@@ -93,6 +131,26 @@ describe("profielbeheer", () => {
 });
 
 describe("oefenruimte", () => {
+  it("ontgrendelt alle niveaus als de ontwikkelaarsoptie aanstaat", async () => {
+    const user = userEvent.setup();
+    const onStartStandard = vi.fn();
+    const props = {
+      snapshot, exercises: [], onStartStandard, onStartExercise: vi.fn(), onManageExercises: vi.fn(),
+    };
+    const { rerender } = render(<PracticeView {...props} />);
+    const level3 = screen.getAllByText("Niveau 3")[0].closest("details")!;
+    expect(level3).not.toHaveAttribute("open");
+    rerender(<PracticeView {...props} unlimitedScenarios />);
+    expect(level3).toHaveAttribute("open");
+    expect(screen.queryByRole("heading", { name: "Onbeperkt oefenen" })).not.toBeInTheDocument();
+    const start = within(level3).getAllByRole("button", { name: "Start" })[0];
+    expect(start).toBeEnabled();
+    await user.click(start);
+    expect(onStartStandard).toHaveBeenCalledOnce();
+    rerender(<PracticeView {...props} />);
+    expect(level3.querySelector("button")).toBeDisabled();
+  });
+
   it("toont uitklapbare niveaus vanaf 0, de drie bronnen en niveauvergrendeling", async () => {
     const user = userEvent.setup();
     const onStartStandard = vi.fn();
@@ -181,6 +239,37 @@ describe("oefenruimte", () => {
 });
 
 describe("taalinstelling", () => {
+  it("vertaalt de ontwikkelaarsoptie in het Engels", () => {
+    render(
+      <LanguageProvider language="en">
+        <ProfileView
+          snapshot={{ ...snapshot, language: "en" }}
+          exercises={[]}
+          exerciseReturn={null}
+          onExerciseReturnConsumed={vi.fn()}
+          onExport={vi.fn()}
+          onImport={vi.fn()}
+          onReset={vi.fn()}
+          onExerciseExport={vi.fn()}
+          onExerciseImport={vi.fn()}
+          onOpenEditor={vi.fn()}
+          unlimitedScenarios
+        />
+        <PracticeView
+          snapshot={{ ...snapshot, language: "en" }}
+          exercises={[]}
+          onStartStandard={vi.fn()}
+          onStartExercise={vi.fn()}
+          onManageExercises={vi.fn()}
+          unlimitedScenarios
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole("checkbox", { name: "Practise unlimited scenarios" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Practise unlimited events" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Unlimited practice" })).not.toBeInTheDocument();
+  });
+
   it("kan vanuit het profiel naar Engels worden gewijzigd", async () => {
     const onLanguageChange = vi.fn();
     const user = userEvent.setup();
