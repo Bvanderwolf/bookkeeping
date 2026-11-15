@@ -1,5 +1,5 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRepository } from "../data/repository";
 import { standardPracticeTemplates } from "../domain/scenarios";
 import { useAppModel } from "./useAppModel";
@@ -8,7 +8,33 @@ beforeEach(async () => {
   window.localStorage.clear();
   await createRepository().reset();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+});
+
+it("negeert opgeslagen ontwikkelaarsopties in een productiebuild", async () => {
+  window.localStorage.setItem("mijn-bedrijf:unlimited-scenarios", "true");
+  window.localStorage.setItem("mijn-bedrijf:unlimited-events", "true");
+  vi.stubEnv("DEV", false);
+  const { result } = renderHook(() => useAppModel());
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(result.current.unlimitedScenarios).toBe(false);
+  expect(result.current.unlimitedEvents).toBe(false);
+
+  await act(async () => {
+    await result.current.createCompany("Productiebedrijf", "creative", "webdesign");
+  });
+  const advanced = standardPracticeTemplates(result.current.snapshot.profile!).find((template) => template.level === 3)!;
+  await expect(result.current.startStandardPractice(advanced.id)).rejects.toThrow(/nog niet beschikbaar/);
+  await expect(result.current.startExtraEvent()).rejects.toThrow(/staat uit/);
+  act(() => {
+    result.current.setUnlimitedScenariosEnabled(true);
+    result.current.setUnlimitedEventsEnabled(true);
+  });
+  expect(result.current.unlimitedScenarios).toBe(false);
+  expect(result.current.unlimitedEvents).toBe(false);
+});
 
 describe("onbeperkt scenario's oefenen", () => {
   it("bewaart de lokale voorkeur en ontgrendelt alle standaardoefeningen zonder het leerniveau te wijzigen", async () => {

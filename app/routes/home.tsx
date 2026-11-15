@@ -27,6 +27,7 @@ import { ExerciseEditor } from "../components/ExerciseEditor";
 import { AccountantEvent } from "../components/AccountantEvent";
 import styles from "./home.module.css";
 import { LanguageProvider, translate, useI18n } from "../i18n";
+import { developerOptionsAvailable } from "../developerOptions";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -612,7 +613,7 @@ export function ProfileView({
         </div>
       </section>
 
-      <section className={styles.developerOptionsCard} aria-labelledby="developer-options-title">
+      {developerOptionsAvailable() && <section className={styles.developerOptionsCard} aria-labelledby="developer-options-title">
         <div>
           <h2 id="developer-options-title">{t("Ontwikkelaarsopties")}</h2>
           <p>{t("Extra mogelijkheden om scenario's te testen.")}</p>
@@ -633,7 +634,7 @@ export function ProfileView({
           />
           <span>{t("Onbeperkt events oefenen")}</span>
         </label>
-      </section>
+      </section>}
 
       <details
         className={styles.dataCard}

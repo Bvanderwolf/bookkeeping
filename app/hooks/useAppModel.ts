@@ -20,6 +20,7 @@ import type {
   StoredExercise,
 } from "../domain/types";
 import { createRepository, freshProgress } from "../data/repository";
+import { developerOptionsAvailable } from "../developerOptions";
 
 const developerPracticeKey = "mijn-bedrijf:unlimited-scenarios";
 const developerEventsKey = "mijn-bedrijf:unlimited-events";
@@ -40,19 +41,21 @@ export function useAppModel() {
   const [exercises, setExercises] = useState<StoredExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [unlimitedScenarios, setUnlimitedScenarios] = useState(
-    () => typeof window !== "undefined" && window.localStorage.getItem(developerPracticeKey) === "true",
+    () => developerOptionsAvailable() && typeof window !== "undefined" && window.localStorage.getItem(developerPracticeKey) === "true",
   );
   const [unlimitedEvents, setUnlimitedEvents] = useState(
-    () => typeof window !== "undefined" && window.localStorage.getItem(developerEventsKey) === "true",
+    () => developerOptionsAvailable() && typeof window !== "undefined" && window.localStorage.getItem(developerEventsKey) === "true",
   );
 
   const setUnlimitedScenariosEnabled = useCallback((enabled: boolean) => {
+    if (!developerOptionsAvailable()) return;
     if (enabled) window.localStorage.setItem(developerPracticeKey, "true");
     else window.localStorage.removeItem(developerPracticeKey);
     setUnlimitedScenarios(enabled);
   }, []);
 
   const setUnlimitedEventsEnabled = useCallback((enabled: boolean) => {
+    if (!developerOptionsAvailable()) return;
     if (enabled) window.localStorage.setItem(developerEventsKey, "true");
     else window.localStorage.removeItem(developerEventsKey);
     setUnlimitedEvents(enabled);
@@ -105,13 +108,13 @@ export function useAppModel() {
         const existing = snapshot.instances.find((instance) => instance.mode === "tutorial");
         if (existing) return existing;
       }
-      if (mode === "daily" && !unlimitedScenarios) {
+      if (mode === "daily" && (!developerOptionsAvailable() || !unlimitedScenarios)) {
         const existing = snapshot.instances.find(
           (instance) => instance.id === `daily-${date}`,
         );
         if (existing) return existing;
       }
-      const nonce = mode === "daily" && unlimitedScenarios
+      const nonce = mode === "daily" && developerOptionsAvailable() && unlimitedScenarios
         ? crypto.randomUUID()
         : mode === "practice" ? `${Date.now()}:${snapshot.instances.length}` : "";
       const instance = createScenarioInstance(snapshot.profile, snapshot.progress, mode, date, nonce, snapshot.language ?? "nl");
@@ -141,7 +144,7 @@ export function useAppModel() {
     async (templateId: string) => {
       if (!snapshot.profile) throw new Error("Maak eerst een bedrijf aan.");
       const template = SCENARIO_TEMPLATES.find((item) => item.id === templateId);
-      if (!template || (!unlimitedScenarios && template.level > snapshot.progress.unlockedLevel)) {
+      if (!template || ((!developerOptionsAvailable() || !unlimitedScenarios) && template.level > snapshot.progress.unlockedLevel)) {
         throw new Error("Deze oefening is nog niet beschikbaar.");
       }
       const instance = createPracticeInstanceForTemplate(
@@ -229,7 +232,7 @@ export function useAppModel() {
   }, [reload, repository]);
 
   const startExtraEvent = useCallback(async () => {
-    if (!unlimitedEvents) throw new Error("Onbeperkt events oefenen staat uit.");
+    if (!developerOptionsAvailable() || !unlimitedEvents) throw new Error("Onbeperkt events oefenen staat uit.");
     const event = await repository.createExtraEvent();
     setSnapshot((current) => ({ ...current, events: [...(current.events ?? []), event] }));
     return event;
@@ -278,8 +281,8 @@ export function useAppModel() {
     loading,
     snapshot,
     exercises,
-    unlimitedScenarios,
-    unlimitedEvents,
+    unlimitedScenarios: developerOptionsAvailable() && unlimitedScenarios,
+    unlimitedEvents: developerOptionsAvailable() && unlimitedEvents,
     setUnlimitedScenariosEnabled,
     setUnlimitedEventsEnabled,
     setLanguage,

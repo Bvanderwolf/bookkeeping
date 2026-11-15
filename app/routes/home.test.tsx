@@ -7,7 +7,10 @@ import { PracticeView, ProfileView } from "./home";
 import { LanguageProvider } from "../i18n";
 import { createPracticeInstanceForTemplate } from "../domain/scenarios";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+});
 
 const snapshot: AppSnapshot = {
   profile: {
@@ -39,6 +42,28 @@ const selfMadeExercise: StoredExercise = {
 };
 
 describe("profielbeheer", () => {
+  it("verbergt ontwikkelaarsopties in een productiebuild", () => {
+    vi.stubEnv("DEV", false);
+    render(
+      <ProfileView
+        snapshot={snapshot}
+        exercises={[]}
+        exerciseReturn={null}
+        onExerciseReturnConsumed={vi.fn()}
+        onExport={vi.fn()}
+        onImport={vi.fn()}
+        onReset={vi.fn()}
+        onExerciseExport={vi.fn()}
+        onExerciseImport={vi.fn()}
+        onOpenEditor={vi.fn()}
+        unlimitedScenarios
+        unlimitedEvents
+      />,
+    );
+    expect(screen.queryByRole("heading", { name: "Ontwikkelaarsopties" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Onbeperkt scenario's oefenen" })).not.toBeInTheDocument();
+  });
+
   it("biedt een toegankelijke schakelaar voor onbeperkt oefenen", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
